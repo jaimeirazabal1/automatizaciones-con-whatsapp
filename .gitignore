@@ -1,0 +1,52 @@
+# Dependencias
+node_modules/
+package-lock.json
+
+# Archivos de entorno
+.env
+
+# Archivos de sesión
+session/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Directorios de compilación
+dist/
+build/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+.docker/data/
+
+# No ignorar estos archivos (necesarios para tracking de sprints)
+!sprints/
+!sprints/**/*.md
+!docs/sprints/
+!docs/planning/
+
+# Archivos temporales
+tmp/
+temp/
+
+# Documentación generada
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# Cobertura de tests
+coverage/
+.nyc_output/ 
