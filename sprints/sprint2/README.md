@@ -16,11 +16,11 @@
 - [ ] Implementar ayuda dinámica para comandos
 
 ### Manejo de multimedia básico (EE: 4) - 16h
-- [ ] Implementar envío de imágenes 
-- [ ] Añadir soporte para envío de documentos
-- [ ] Integrar envío de audio y notas de voz
-- [ ] Crear sistema para recibir y procesar multimedia
-- [ ] Implementar almacenamiento temporal de archivos recibidos
+- [x] Implementar envío de imágenes 
+- [x] Añadir soporte para envío de documentos
+- [x] Integrar envío de audio y notas de voz
+- [x] Crear sistema para recibir y procesar multimedia
+- [x] Implementar almacenamiento temporal de archivos recibidos
 
 ### Mensajes programados (EE: 3) - 12h
 - [ ] Mejorar el modelo de mensajes programados
@@ -38,12 +38,22 @@
 
 ### Pruebas e integración (EE: 2) - 8h
 - [ ] Probar sistema de comandos avanzados
-- [ ] Verificar funcionalidades multimedia
+- [x] Verificar funcionalidades multimedia
 - [ ] Comprobar mensajes programados y recurrentes
 - [ ] Validar gestión de grupos
 - [ ] Realizar pruebas de integración completas
 
 ## Métricas de seguimiento
 - **Tiempo estimado total**: 60 horas
-- **Fecha inicio**: Pendiente
-- **Fecha fin prevista**: Pendiente 
+- **Fecha inicio**: 10/07/2023
+- **Fecha fin prevista**: 24/07/2023
+- **Progreso actual**: 40% (24/60 horas)
+
+## Funcionalidades implementadas
+### Manejo de multimedia
+- Modelo para almacenamiento de archivos multimedia (MediaFile)
+- Utilidad para procesar y gestionar archivos (MediaHandler)
+- Sistema de almacenamiento temporal con limpieza automática
+- API REST para envío y gestión de archivos multimedia
+- Comandos de WhatsApp para interactuar con multimedia (!sticker, !imagen, !documento, !audio)
+- Soporte para envío de imágenes, documentos, audios y stickers 

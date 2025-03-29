@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { MessageMedia } = require("whatsapp-web.js");
 const { v4: uuidv4 } = require("uuid");
+const MediaFile = require("../models/MediaFile");
 
 // Directorio para almacenar archivos multimedia temporales
 const TEMP_DIR = path.join(__dirname, "media", "temp");
@@ -20,9 +21,15 @@ class MediaHandler {
    * @param {Buffer|string} mediaData - Buffer o string base64 del archivo
    * @param {string} filename - Nombre del archivo (opcional)
    * @param {string} mimetype - Tipo MIME del archivo
+   * @param {string} messageId - ID del mensaje asociado (opcional)
    * @returns {string} - Ruta al archivo guardado
    */
-  static saveMedia(mediaData, filename = null, mimetype = null) {
+  static async saveMedia(
+    mediaData,
+    filename = null,
+    mimetype = null,
+    messageId = null
+  ) {
     try {
       // Generar nombre de archivo único si no se proporciona
       if (!filename) {
@@ -39,6 +46,22 @@ class MediaHandler {
 
       // Guardar archivo
       fs.writeFileSync(filePath, buffer);
+
+      // Guardar en la base de datos si se proporciona messageId
+      if (messageId) {
+        const fileSize = buffer.length;
+
+        const mediaFile = new MediaFile({
+          messageId,
+          filename,
+          filePath,
+          mimetype,
+          fileSize,
+          tempFile: true,
+        });
+
+        await mediaFile.save();
+      }
 
       return filePath;
     } catch (error) {
@@ -65,7 +88,12 @@ class MediaHandler {
       const ext = this.getExtensionFromMimetype(media.mimetype);
       const filename = `${uuidv4()}.${ext}`;
 
-      return this.saveMedia(media.data, filename, media.mimetype);
+      return await this.saveMedia(
+        media.data,
+        filename,
+        media.mimetype,
+        message.id.id
+      );
     } catch (error) {
       console.error("Error al guardar multimedia del mensaje:", error);
       throw error;
@@ -103,12 +131,16 @@ class MediaHandler {
   /**
    * Elimina un archivo multimedia temporal
    * @param {string} filePath - Ruta al archivo a eliminar
-   * @returns {boolean} - true si se eliminó correctamente
+   * @returns {Promise<boolean>} - true si se eliminó correctamente
    */
-  static deleteMedia(filePath) {
+  static async deleteMedia(filePath) {
     try {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
+
+        // Actualizar en la base de datos
+        await MediaFile.updateMany({ filePath }, { $set: { tempFile: false } });
+
         return true;
       }
       return false;
@@ -122,20 +154,29 @@ class MediaHandler {
    * Limpia archivos temporales más antiguos que cierta edad
    * @param {number} maxAgeMs - Edad máxima en milisegundos (por defecto 24h)
    */
-  static cleanupTempFiles(maxAgeMs = 24 * 60 * 60 * 1000) {
+  static async cleanupTempFiles(maxAgeMs = 24 * 60 * 60 * 1000) {
     try {
       const now = Date.now();
       const files = fs.readdirSync(TEMP_DIR);
 
-      files.forEach((file) => {
+      // Eliminar archivos más antiguos que maxAgeMs
+      for (const file of files) {
         const filePath = path.join(TEMP_DIR, file);
         const stats = fs.statSync(filePath);
 
-        // Eliminar archivos más antiguos que maxAgeMs
         if (now - stats.mtimeMs > maxAgeMs) {
-          this.deleteMedia(filePath);
+          await this.deleteMedia(filePath);
         }
-      });
+      }
+
+      // También limpiar registros en la base de datos que ya no tienen archivos
+      const allMediaFiles = await MediaFile.find({ tempFile: true });
+      for (const mediaFile of allMediaFiles) {
+        if (!fs.existsSync(mediaFile.filePath)) {
+          mediaFile.tempFile = false;
+          await mediaFile.save();
+        }
+      }
     } catch (error) {
       console.error("Error al limpiar archivos temporales:", error);
     }
@@ -173,6 +214,24 @@ class MediaHandler {
     };
 
     return mimetypeMap[mimetype] || "bin";
+  }
+
+  /**
+   * Busca archivos multimedia por messageId
+   * @param {string} messageId - ID del mensaje
+   * @returns {Promise<Array>} - Array de archivos multimedia
+   */
+  static async findByMessageId(messageId) {
+    return await MediaFile.find({ messageId });
+  }
+
+  /**
+   * Busca archivos multimedia por tipo
+   * @param {string} fileType - Tipo de archivo
+   * @returns {Promise<Array>} - Array de archivos multimedia
+   */
+  static async findByType(fileType) {
+    return await MediaFile.find({ fileType });
   }
 }
 
