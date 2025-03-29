@@ -23,11 +23,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Crear directorio para archivos multimedia si no existe
-const mediaDir = path.join(__dirname, "utils", "media");
-if (!fs.existsSync(mediaDir)) {
-  fs.mkdirSync(mediaDir, { recursive: true });
-}
+// Verificar que los directorios para archivos multimedia estén creados
+// (La lógica de creación ahora está en MediaHandler)
 
 // Conectar a MongoDB
 connectDB();
@@ -85,40 +82,63 @@ client.on("message", async (msg) => {
     let mediaFile = null;
     if (msg.hasMedia) {
       try {
-        mediaPath = await whatsappService.saveMedia(msg);
+        // Guardar archivos permanentemente (false indica que no es temporal)
+        mediaPath = await whatsappService.saveMedia(msg, false);
         console.log(`Archivo multimedia guardado en: ${mediaPath}`);
 
         // Obtener información del archivo multimedia
-        const media = await msg.downloadMedia();
-        const fileType = MediaHandler.getExtensionFromMimetype(media.mimetype);
+        try {
+          const media = await msg.downloadMedia();
 
-        // Verificar si el mensaje no es un comando para procesar el archivo automáticamente
-        if (!isCommand) {
-          // Responder con confirmación según el tipo de archivo
-          if (media.mimetype.startsWith("image/")) {
-            await msg.reply(
-              `✅ Imagen recibida y guardada correctamente.\nPuedes acceder a ella usando la referencia: ${message._id}`
+          if (media) {
+            const fileType = MediaHandler.getExtensionFromMimetype(
+              media.mimetype
             );
-          } else if (
-            media.mimetype.startsWith("application/") ||
-            media.mimetype === "text/plain"
-          ) {
-            await msg.reply(
-              `✅ Documento recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
-            );
-          } else if (media.mimetype.startsWith("audio/")) {
-            await msg.reply(
-              `✅ Audio recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
-            );
-          } else if (media.mimetype.startsWith("video/")) {
-            await msg.reply(
-              `✅ Video recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
-            );
+
+            // Verificar si el mensaje no es un comando para procesar el archivo automáticamente
+            if (!isCommand) {
+              // Responder con confirmación según el tipo de archivo
+              if (media.mimetype.startsWith("image/")) {
+                await msg.reply(
+                  `✅ Imagen recibida y guardada correctamente.\nPuedes acceder a ella usando la referencia: ${message._id}`
+                );
+              } else if (
+                media.mimetype.startsWith("application/") ||
+                media.mimetype === "text/plain"
+              ) {
+                await msg.reply(
+                  `✅ Documento recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
+                );
+              } else if (media.mimetype.startsWith("audio/")) {
+                await msg.reply(
+                  `✅ Audio recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
+                );
+              } else if (media.mimetype.startsWith("video/")) {
+                await msg.reply(
+                  `✅ Video recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
+                );
+              } else {
+                await msg.reply(
+                  `✅ Archivo recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
+                );
+              }
+            }
           } else {
+            console.error(
+              "Error: media es undefined después de downloadMedia()"
+            );
             await msg.reply(
-              `✅ Archivo recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
+              `✅ Archivo recibido y guardado correctamente, pero no se puede determinar el tipo.\nPuedes acceder a él usando la referencia: ${message._id}`
             );
           }
+        } catch (mediaDownloadError) {
+          console.error(
+            "Error al descargar multimedia para procesar:",
+            mediaDownloadError
+          );
+          await msg.reply(
+            `✅ Archivo recibido y guardado correctamente, pero hubo un problema al procesarlo.\nPuedes acceder a él usando la referencia: ${message._id}`
+          );
         }
       } catch (mediaError) {
         console.error("Error al guardar archivo multimedia:", mediaError);
@@ -147,7 +167,10 @@ client.on("message", async (msg) => {
 !imagen <url> - Envía una imagen desde una URL
 !documento <url> - Envía un documento desde una URL
 !audio <url> - Envía un audio (adjunta al mensaje)
-!info - Muestra información del mensaje (útil para multimedia)`;
+!info - Muestra información del mensaje (útil para multimedia)
+!mime - Muestra información detallada del tipo MIME (adjunta archivo)
+!archivos - Lista los últimos 5 archivos que enviaste
+!reenviar <id> - Reenvía un archivo usando su ID de referencia`;
 
       msg.reply(helpMessage);
     }
@@ -240,13 +263,11 @@ client.on("message", async (msg) => {
       }
 
       try {
-        const audioPath = await whatsappService.saveMedia(quotedMsg);
+        // Guardar el audio permanentemente (false indica que no es temporal)
+        const audioPath = await whatsappService.saveMedia(quotedMsg, false);
         await whatsappService.sendAudio(msg.from, audioPath, true);
 
-        // Limpiar archivo temporal
-        setTimeout(() => {
-          MediaHandler.deleteMedia(audioPath);
-        }, 30000);
+        // Nota: Ya no necesitamos eliminar el archivo porque no es temporal
       } catch (error) {
         console.error("Error al procesar audio:", error);
         msg.reply("No se pudo procesar el audio.");
@@ -265,12 +286,44 @@ client.on("message", async (msg) => {
       if (msg.hasMedia) {
         const media = await msg.downloadMedia();
         info += `Tipo multimedia: ${media.mimetype}\n`;
+        const extension = MediaHandler.getExtensionFromMimetype(media.mimetype);
+        info += `Extensión detectada: ${extension}\n`;
         if (media.filename) {
           info += `Nombre archivo: ${media.filename}\n`;
         }
       }
 
       msg.reply(info);
+    }
+
+    // Comando para depurar tipos MIME
+    else if (messageBody === "!mime" && msg.hasMedia) {
+      try {
+        const media = await msg.downloadMedia();
+        const mimetype = media.mimetype;
+        const extension = MediaHandler.getExtensionFromMimetype(mimetype);
+
+        let debugInfo = `*Información de MIME:*\n`;
+        debugInfo += `MIME detectado: ${mimetype}\n`;
+        debugInfo += `Extensión asignada: ${extension}\n`;
+
+        // Guardar el archivo para verificar
+        const tempPath = await MediaHandler.saveMedia(
+          media.data,
+          `debug_${Date.now()}.${extension}`,
+          mimetype,
+          msg.id.id,
+          false // No es temporal
+        );
+
+        debugInfo += `Archivo guardado en: ${tempPath}\n`;
+        debugInfo += `Este comando ayuda a los desarrolladores a mejorar la detección de archivos.`;
+
+        msg.reply(debugInfo);
+      } catch (error) {
+        console.error("Error al depurar MIME:", error);
+        msg.reply("Error al procesar la información MIME.");
+      }
     }
 
     // Comando para reenviar un archivo multimedia usando una referencia
@@ -371,17 +424,7 @@ client.on("message", async (msg) => {
       }
     }
 
-    // Limpiar archivos temporales
-    if (mediaPath) {
-      // Eliminar archivos temporales después de 30 segundos
-      setTimeout(() => {
-        try {
-          MediaHandler.deleteMedia(mediaPath);
-        } catch (error) {
-          console.error("Error al eliminar archivo temporal:", error);
-        }
-      }, 30000);
-    }
+    // Ya no limpiaremos archivos temporales, los conservamos
   } catch (error) {
     console.error("Error al procesar mensaje:", error);
   }
@@ -485,18 +528,20 @@ app.post("/api/sendMedia", async (req, res) => {
       case "audio":
         // Descargar el audio primero
         const audioMedia = await MediaHandler.fromUrl(mediaUrl);
-        const tempPath = MediaHandler.saveMedia(
+        // Guardar en archivo permanente (isTemp = false)
+        const audioPath = await MediaHandler.saveMedia(
           audioMedia.data,
           sendOptions.filename || `audio_${Date.now()}.mp3`,
-          audioMedia.mimetype
+          audioMedia.mimetype,
+          null,
+          false // Este archivo no es temporal
         );
         result = await whatsappService.sendAudio(
           to,
-          tempPath,
+          audioPath,
           sendOptions.asVoiceNote || false
         );
-        // Eliminar archivo temporal después
-        setTimeout(() => MediaHandler.deleteMedia(tempPath), 30000);
+        // No eliminamos el archivo porque ya no es temporal
         break;
       default:
         result = await whatsappService.sendMediaFromUrl(

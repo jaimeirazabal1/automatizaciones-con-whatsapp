@@ -32,11 +32,13 @@ services:
     volumes:
       - ./:/app
       - whatsapp_session:/app/session
+      - ./media_files:/app/media_files
     environment:
       - NODE_ENV=production
       - PORT=3000
       - MONGODB_URI=mongodb://mongodb:27017/whatsapp_bot
       - SESSION_DATA_PATH=/app/session
+      - MEDIA_DIR=/app/media_files
     networks:
       - whatsapp-network
 

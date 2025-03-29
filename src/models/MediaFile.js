@@ -31,14 +31,22 @@ const MediaFileSchema = new mongoose.Schema({
   },
   tempFile: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   createdAt: {
     type: Date,
     default: Date.now,
-    expires: "24h", // Se eliminará automáticamente después de 24 horas si tempFile es true
   },
 });
+
+// Configuramos TTL solo para documentos con tempFile=true
+MediaFileSchema.index(
+  { createdAt: 1 },
+  {
+    expireAfterSeconds: 259200, // 72 horas en segundos (3 días)
+    partialFilterExpression: { tempFile: true },
+  }
+);
 
 /**
  * Middleware pre-save para determinar el tipo de archivo basado en el mimetype

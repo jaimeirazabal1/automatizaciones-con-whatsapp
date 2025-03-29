@@ -7,6 +7,7 @@ const Message = require("../models/message");
 const MediaFile = require("../models/MediaFile");
 const crypto = require("crypto");
 const cookieParser = require("cookie-parser");
+const MediaHandler = require("../utils/mediaHandler");
 
 // Usar cookie-parser en el router
 router.use(cookieParser());
@@ -243,6 +244,102 @@ router.post("/api/restart", checkAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Error al reiniciar cliente",
+    });
+  }
+});
+
+// API para obtener contactos de WhatsApp
+router.get("/api/contacts", checkAuth, async (req, res) => {
+  try {
+    // Obtener contactos desde el servicio de WhatsApp
+    const contacts = await whatsappService.getContacts();
+
+    // Filtrar y mapear solo los datos relevantes
+    const formattedContacts = contacts
+      .filter((contact) => contact.isMyContact || contact.isWAContact)
+      .map((contact) => ({
+        id: contact.id._serialized,
+        name: contact.name || contact.pushname || "Sin nombre",
+        number: contact.number,
+        profilePicUrl: contact.profilePicUrl,
+        isGroup: contact.isGroup,
+        lastSeen: contact.lastSeen || null,
+      }));
+
+    res.json({
+      success: true,
+      data: formattedContacts,
+    });
+  } catch (error) {
+    console.error("Error al obtener contactos:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error al obtener contactos",
+    });
+  }
+});
+
+// API para obtener mensajes de una conversación
+router.get("/api/messages/:contactId", checkAuth, async (req, res) => {
+  try {
+    const { contactId } = req.params;
+    const { limit = 50, before = null } = req.query;
+
+    // Obtener mensajes desde la base de datos
+    let query = {
+      $or: [{ from: contactId }, { to: contactId }],
+    };
+
+    // Si se proporciona un ID de mensaje anterior, filtrar por fecha
+    if (before) {
+      const beforeMessage = await Message.findById(before);
+      if (beforeMessage) {
+        query.createdAt = { $lt: beforeMessage.createdAt };
+      }
+    }
+
+    // Obtener mensajes ordenados por fecha (más recientes primero)
+    const messages = await Message.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .lean();
+
+    // Obtener información multimedia para cada mensaje
+    const messagesWithMedia = await Promise.all(
+      messages.map(async (message) => {
+        if (message.hasMedia) {
+          const mediaFiles = await MediaHandler.findByMessageId(
+            message.messageId
+          );
+          message.media = mediaFiles.map((file) => ({
+            id: file._id,
+            filename: file.filename,
+            fileType: file.fileType,
+            mimetype: file.mimetype,
+            fileSize: file.fileSize,
+          }));
+        }
+        return message;
+      })
+    );
+
+    // Ordenar de más antiguos a más recientes para mostrarlos correctamente
+    const sortedMessages = messagesWithMedia.reverse();
+
+    res.json({
+      success: true,
+      data: sortedMessages,
+      pagination: {
+        hasMore: messages.length === parseInt(limit),
+        nextBefore:
+          messages.length > 0 ? messages[messages.length - 1]._id : null,
+      },
+    });
+  } catch (error) {
+    console.error("Error al obtener mensajes:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error al obtener mensajes",
     });
   }
 });

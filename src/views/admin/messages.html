@@ -4,726 +4,672 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mensajes - Panel de Administración WhatsApp Bot</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Mensajes - WhatsApp Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        .sidebar {
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 100;
-            padding: 48px 0 0;
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        body {
             background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .sidebar-sticky {
-            height: calc(100vh - 48px);
-            overflow-x: hidden;
+        .sidebar {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            border-right: 1px solid #dee2e6;
+            position: fixed;
+            width: 250px;
+        }
+
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: #25D366;
+            color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .contact-list {
+            max-height: calc(100vh - 170px);
             overflow-y: auto;
         }
 
-        .nav-link {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .nav-link.active {
-            color: #2470dc;
-        }
-
-        .nav-link:hover {
-            color: #0d6efd;
-        }
-
-        .navbar-brand {
-            padding-top: .75rem;
-            padding-bottom: .75rem;
-            background-color: rgba(0, 0, 0, .25);
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
-        }
-
-        .card {
-            border-radius: 10px;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
-            margin-bottom: 1.5rem;
-        }
-
-        .message-container {
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        .message {
-            padding: 10px 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            max-width: 75%;
-        }
-
-        .message-incoming {
-            background-color: #f1f0f0;
-            margin-right: auto;
-        }
-
-        .message-outgoing {
-            background-color: #d4edda;
-            margin-left: auto;
-        }
-
-        .message-info {
-            font-size: 0.8rem;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-
-        .message-media-icon {
-            display: inline-block;
-            margin-right: 5px;
-            color: #6c757d;
-        }
-
-        .pagination-container {
-            display: flex;
-            justify-content: center;
-            margin-top: 2rem;
-        }
-
-        .contact-list-item {
-            padding: 10px 15px;
-            border-bottom: 1px solid #dee2e6;
+        .contact-item {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
             cursor: pointer;
         }
 
-        .contact-list-item:hover {
-            background-color: #f8f9fa;
-        }
-
-        .contact-list-item.active {
+        .contact-item:hover {
             background-color: #e9ecef;
         }
 
-        .contact-name {
-            font-weight: 500;
+        .contact-item.active {
+            background-color: #e9ecef;
+            border-left: 4px solid #25D366;
         }
 
-        .last-message {
-            font-size: 0.85rem;
+        .message-container {
+            height: calc(100vh - 240px);
+            overflow-y: auto;
+            background-color: #e5ded8;
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .message.sent {
+            background-color: #dcf8c6;
+            margin-left: auto;
+        }
+
+        .message.received {
+            background-color: white;
+        }
+
+        .message-input {
+            margin-top: 15px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .message-info {
+            font-size: 0.75rem;
             color: #6c757d;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            text-align: right;
         }
 
-        .badge-unread {
-            background-color: #28a745;
+        .contact-search {
+            padding: 10px 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            color: #6c757d;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            margin-right: 10px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            padding: 15px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            color: #adb5bd;
+        }
+
+        .message-media {
+            margin-top: 5px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding-top: 5px;
+            color: #6c757d;
+            font-size: 0.85rem;
         }
     </style>
 </head>
 
 <body>
-    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">WhatsApp Bot</a>
-        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse"
-            data-bs-target="#sidebarMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="w-100"></div>
-        <div class="navbar-nav">
-            <div class="nav-item text-nowrap">
-                <a class="nav-link px-3" href="/admin/logout">Cerrar sesión</a>
-            </div>
+    <div class="header d-flex justify-content-between align-items-center">
+        <div>
+            <h2>WhatsApp Bot</h2>
         </div>
-    </header>
+        <div>
+            <a href="/admin/logout" class="btn btn-light">Cerrar Sesión</a>
+        </div>
+    </div>
 
-    <div class="container-fluid">
-        <div class="row">
-            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                <div class="position-sticky pt-3 sidebar-sticky">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                <div class="sidebar">
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link" href="/admin">
-                                <i class="bi bi-speedometer2"></i> Dashboard
-                            </a>
+                            <a class="nav-link" href="/admin"><i class="bi bi-house"></i> Dashboard</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="/admin/messages">
-                                <i class="bi bi-chat-dots"></i> Mensajes
-                            </a>
+                            <a class="nav-link active" href="/admin/messages"><i class="bi bi-chat"></i> Mensajes</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/admin/media">
-                                <i class="bi bi-images"></i> Multimedia
-                            </a>
+                            <a class="nav-link" href="/admin/media"><i class="bi bi-image"></i> Multimedia</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/admin/settings">
-                                <i class="bi bi-gear"></i> Configuración
-                            </a>
+                            <a class="nav-link" href="/admin/settings"><i class="bi bi-gear"></i> Configuración</a>
                         </li>
                     </ul>
 
-                    <h6
-                        class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
-                        <span>Acciones rápidas</span>
-                    </h6>
+                    <hr>
+
+                    <h6 class="sidebar-heading px-3 mt-4 mb-1 text-muted">Acciones rápidas</h6>
                     <ul class="nav flex-column mb-2">
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="btnSendMessage">
+                            <a class="nav-link" href="#" id="sendMessageBtn">
                                 <i class="bi bi-send"></i> Enviar mensaje
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="btnRestartClient">
-                                <i class="bi bi-arrow-clockwise"></i> Reiniciar cliente
+                            <a class="nav-link" href="#" id="restartClientBtn" data-bs-toggle="modal"
+                                data-bs-target="#restartModal">
+                                <i class="bi bi-arrow-repeat"></i> Reiniciar cliente
                             </a>
                         </li>
                     </ul>
                 </div>
-            </nav>
+            </div>
 
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div
-                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Mensajes</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <div class="btn-group me-2">
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefresh">
-                                <i class="bi bi-arrow-repeat"></i> Actualizar
-                            </button>
-                        </div>
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="content">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 class="h2">Mensajes</h1>
+                        <button id="refreshContactsBtn" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise"></i> Actualizar
+                        </button>
                     </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card h-100">
-                            <div class="card-header">
-                                <div class="input-group">
-                                    <input type="text" class="form-control" placeholder="Buscar contacto..."
-                                        id="searchContact">
-                                    <button class="btn btn-outline-secondary" type="button">
+                    <div class="row">
+                        <!-- Contactos -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="search-box">
+                                        <input type="text" id="contactSearch" class="form-control"
+                                            placeholder="Buscar contacto...">
                                         <i class="bi bi-search"></i>
-                                    </button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div id="contactList" class="contact-list">
+                                        <div id="loadingContacts" class="text-center py-3">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                            <p class="mt-2">Cargando contactos...</p>
+                                        </div>
+                                        <div id="contactsError" class="error-message d-none">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            <p>Error al cargar contactos</p>
+                                        </div>
+                                        <div id="emptyContacts" class="text-center py-3 d-none">
+                                            <p>No hay contactos disponibles</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="card-body p-0" style="height: 500px; overflow-y: auto;">
-                                <div id="contactsList">
-                                    <!-- Los contactos se cargarán aquí -->
-                                    <div class="text-center p-3">
-                                        <div class="spinner-border spinner-border-sm" role="status">
-                                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+
+                        <!-- Mensajes -->
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div id="currentContact">
+                                        Selecciona un contacto para ver los mensajes
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div id="messageContainer" class="message-container">
+                                        <div class="empty-state">
+                                            <i class="bi bi-chat-dots"></i>
+                                            <p>Selecciona un contacto para ver la conversación</p>
                                         </div>
-                                        <p class="mb-0 mt-2">Cargando contactos...</p>
+                                    </div>
+                                    <div class="message-input">
+                                        <div class="input-group">
+                                            <input type="text" id="messageInput" class="form-control"
+                                                placeholder="Escribe un mensaje..." disabled>
+                                            <button id="sendButton" class="btn btn-success" disabled>
+                                                <i class="bi bi-send"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-md-8">
-                        <div class="card h-100">
-                            <div class="card-header" id="chatHeader">
-                                Selecciona un contacto para ver los mensajes
-                            </div>
-                            <div class="card-body message-container" id="messagesContainer">
-                                <div class="text-center p-5">
-                                    <i class="bi bi-chat-dots" style="font-size: 5rem; color: #6c757d;"></i>
-                                    <p class="mt-3">Selecciona un contacto para ver la conversación</p>
-                                </div>
-                            </div>
-                            <div class="card-footer">
-                                <form id="messageForm" class="d-flex">
-                                    <input type="text" class="form-control me-2" placeholder="Escribe un mensaje..."
-                                        id="messageInput" disabled>
-                                    <button class="btn btn-primary" type="submit" disabled id="btnSend">
-                                        <i class="bi bi-send"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
-
-    <!-- Modal para enviar mensaje -->
-    <div class="modal fade" id="sendMessageModal" tabindex="-1" aria-labelledby="sendMessageModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="sendMessageModalLabel">Enviar mensaje</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="sendMessageForm">
-                        <div class="mb-3">
-                            <label for="phoneNumber" class="form-label">Número de teléfono</label>
-                            <input type="text" class="form-control" id="phoneNumber" placeholder="51999123456" required>
-                            <small class="text-muted">Incluye el código de país sin el símbolo +</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="messageText" class="form-label">Mensaje</label>
-                            <textarea class="form-control" id="messageText" rows="3" required></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnSubmitSendMessage">Enviar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal para confirmar reinicio del cliente -->
-    <div class="modal fade" id="restartClientModal" tabindex="-1" aria-labelledby="restartClientModalLabel"
-        aria-hidden="true">
+    <!-- Modal para reiniciar cliente -->
+    <div class="modal fade" id="restartModal" tabindex="-1" aria-labelledby="restartModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="restartClientModalLabel">Reiniciar cliente de WhatsApp</h5>
+                    <h5 class="modal-title" id="restartModalLabel">Reiniciar Cliente de WhatsApp</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>¿Estás seguro de que deseas reiniciar el cliente de WhatsApp?</p>
-                    <p>Esta acción cerrará la sesión actual y volverá a iniciarla. Puede ser necesario escanear el
-                        código QR nuevamente.</p>
+                    <p>¿Estás seguro de que quieres reiniciar el cliente de WhatsApp? Es posible que necesites volver a
+                        escanear el código QR.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="btnConfirmRestart">Reiniciar</button>
+                    <button type="button" id="confirmRestart" class="btn btn-danger">Reiniciar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap & Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Variables globales
-        let currentContact = null;
+        let currentContactId = null;
         let contacts = [];
+        let messages = [];
 
-        // Cargar lista de contactos
-        async function loadContacts() {
-            try {
-                const contactsList = document.getElementById('contactsList');
-                contactsList.innerHTML = `
-          <div class="text-center p-3">
-            <div class="spinner-border spinner-border-sm" role="status">
-              <span class="visually-hidden">Cargando...</span>
-            </div>
-            <p class="mb-0 mt-2">Cargando contactos...</p>
-          </div>
-        `;
+        // Elementos DOM
+        const contactList = document.getElementById('contactList');
+        const contactsError = document.getElementById('contactsError');
+        const loadingContacts = document.getElementById('loadingContacts');
+        const emptyContacts = document.getElementById('emptyContacts');
+        const messageContainer = document.getElementById('messageContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const currentContactElement = document.getElementById('currentContact');
+        const contactSearch = document.getElementById('contactSearch');
+        const refreshContactsBtn = document.getElementById('refreshContactsBtn');
+        const confirmRestartBtn = document.getElementById('confirmRestart');
 
-                const response = await fetch('/api/contacts');
-                const data = await response.json();
-
-                if (data.success) {
-                    contacts = data.data;
-
-                    // Limpiar contenedor
-                    contactsList.innerHTML = '';
-
-                    if (contacts.length === 0) {
-                        contactsList.innerHTML = `
-              <div class="text-center p-3">
-                <i class="bi bi-person-x" style="font-size: 2rem; color: #6c757d;"></i>
-                <p class="mb-0 mt-2">No hay contactos disponibles</p>
-              </div>
-            `;
-                        return;
-                    }
-
-                    // Ordenar contactos por último mensaje
-                    contacts.sort((a, b) => {
-                        return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
-                    });
-
-                    // Crear elementos para cada contacto
-                    contacts.forEach(contact => {
-                        const contactEl = document.createElement('div');
-                        contactEl.className = 'contact-list-item';
-                        contactEl.dataset.phone = contact.phone;
-
-                        const lastMsg = contact.lastMessage || 'Sin mensajes';
-                        const lastMsgTime = contact.lastMessageTime
-                            ? new Date(contact.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                            : '';
-
-                        contactEl.innerHTML = `
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="contact-name">${contact.name || contact.phone}</span>
-                <small>${lastMsgTime}</small>
-              </div>
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="last-message">${lastMsg}</span>
-                ${contact.unreadCount ? `<span class="badge bg-success badge-unread">${contact.unreadCount}</span>` : ''}
-              </div>
-            `;
-
-                        contactEl.addEventListener('click', () => {
-                            // Quitar clase active de todos los contactos
-                            document.querySelectorAll('.contact-list-item').forEach(el => {
-                                el.classList.remove('active');
-                            });
-
-                            // Añadir clase active al contacto seleccionado
-                            contactEl.classList.add('active');
-
-                            // Cargar mensajes del contacto
-                            currentContact = contact;
-                            loadMessages(contact.phone);
-
-                            // Actualizar header
-                            updateChatHeader(contact);
-
-                            // Habilitar envío de mensajes
-                            document.getElementById('messageInput').disabled = false;
-                            document.getElementById('btnSend').disabled = false;
-                        });
-
-                        contactsList.appendChild(contactEl);
-                    });
-                }
-            } catch (error) {
-                console.error('Error al cargar contactos:', error);
-                document.getElementById('contactsList').innerHTML = `
-          <div class="text-center p-3">
-            <i class="bi bi-exclamation-triangle" style="font-size: 2rem; color: #dc3545;"></i>
-            <p class="mb-0 mt-2">Error al cargar contactos</p>
-          </div>
-        `;
-            }
-        }
-
-        // Actualizar encabezado de chat
-        function updateChatHeader(contact) {
-            const chatHeader = document.getElementById('chatHeader');
-            chatHeader.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <span class="fw-bold">${contact.name || 'Desconocido'}</span>
-            <br>
-            <small>${contact.phone}</small>
-          </div>
-          <div>
-            <button class="btn btn-sm btn-outline-secondary me-1" id="btnClearChat">
-              <i class="bi bi-trash"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-primary" id="btnExportChat">
-              <i class="bi bi-download"></i>
-            </button>
-          </div>
-        </div>
-      `;
-
-            // Agregar eventos a los botones
-            document.getElementById('btnClearChat').addEventListener('click', () => {
-                if (confirm(`¿Estás seguro de eliminar la conversación con ${contact.name || contact.phone}?`)) {
-                    clearChat(contact.phone);
-                }
-            });
-
-            document.getElementById('btnExportChat').addEventListener('click', () => {
-                exportChat(contact.phone);
-            });
-        }
-
-        // Cargar mensajes de un contacto
-        async function loadMessages(phone) {
-            try {
-                const messagesContainer = document.getElementById('messagesContainer');
-                messagesContainer.innerHTML = `
-          <div class="text-center p-3">
-            <div class="spinner-border" role="status">
-              <span class="visually-hidden">Cargando...</span>
-            </div>
-            <p class="mt-2">Cargando mensajes...</p>
-          </div>
-        `;
-
-                const response = await fetch(`/api/messages/${phone}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    const messages = data.data;
-
-                    // Limpiar contenedor
-                    messagesContainer.innerHTML = '';
-
-                    if (messages.length === 0) {
-                        messagesContainer.innerHTML = `
-              <div class="text-center p-5">
-                <i class="bi bi-chat" style="font-size: 3rem; color: #6c757d;"></i>
-                <p class="mt-3">No hay mensajes en esta conversación</p>
-              </div>
-            `;
-                        return;
-                    }
-
-                    // Mostrar mensajes
-                    messages.forEach(message => {
-                        const messageEl = document.createElement('div');
-                        messageEl.className = `message ${message.from === 'me' ? 'message-outgoing' : 'message-incoming'}`;
-
-                        // Formatear fecha
-                        const date = new Date(message.timestamp);
-                        const formattedDate = date.toLocaleString();
-
-                        // Comprobar si tiene multimedia
-                        let mediaContent = '';
-                        if (message.hasMedia) {
-                            const mediaIcon = getMediaIcon(message.mediaType);
-                            mediaContent = `
-                <div class="message-media">
-                  <i class="bi ${mediaIcon} message-media-icon"></i>
-                  <span>${message.mediaType || 'Archivo'}</span>
-                  ${message.mediaUrl ? `<a href="${message.mediaUrl}" target="_blank" class="ms-2"><i class="bi bi-download"></i></a>` : ''}
-                </div>
-              `;
-                        }
-
-                        messageEl.innerHTML = `
-              <div>${message.body || ''}</div>
-              ${mediaContent}
-              <div class="message-info">
-                <small>${formattedDate}</small>
-                ${message.from === 'me' ?
-                                `<i class="bi bi-check-all ms-1 ${message.read ? 'text-primary' : ''}"></i>` :
-                                ''}
-              </div>
-            `;
-
-                        messagesContainer.appendChild(messageEl);
-                    });
-
-                    // Scroll al final
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
-            } catch (error) {
-                console.error('Error al cargar mensajes:', error);
-                document.getElementById('messagesContainer').innerHTML = `
-          <div class="text-center p-5">
-            <i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>
-            <p class="mt-3">Error al cargar mensajes</p>
-          </div>
-        `;
-            }
-        }
-
-        // Obtener icono según tipo de medio
-        function getMediaIcon(mediaType) {
-            switch (mediaType?.toLowerCase()) {
-                case 'image': return 'bi-image';
-                case 'video': return 'bi-film';
-                case 'audio': return 'bi-file-earmark-music';
-                case 'document': return 'bi-file-earmark-text';
-                case 'sticker': return 'bi-sticky';
-                default: return 'bi-paperclip';
-            }
-        }
-
-        // Enviar mensaje
-        async function sendMessage(phone, text) {
-            try {
-                const response = await fetch('/api/send', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        phone,
-                        message: text
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    // Limpiar campo de mensaje
-                    document.getElementById('messageInput').value = '';
-
-                    // Recargar mensajes
-                    if (currentContact && currentContact.phone === phone) {
-                        loadMessages(phone);
-                    }
-
-                    return true;
-                } else {
-                    alert('Error al enviar mensaje: ' + data.message);
-                    return false;
-                }
-            } catch (error) {
-                console.error('Error al enviar mensaje:', error);
-                alert('Error al conectar con el servidor');
-                return false;
-            }
-        }
-
-        // Eliminar chat
-        async function clearChat(phone) {
-            try {
-                const response = await fetch(`/api/messages/${phone}`, {
-                    method: 'DELETE'
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('Conversación eliminada correctamente');
-                    loadMessages(phone);
-                } else {
-                    alert('Error al eliminar conversación: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error al eliminar conversación:', error);
-                alert('Error al conectar con el servidor');
-            }
-        }
-
-        // Exportar chat
-        async function exportChat(phone) {
-            try {
-                const response = await fetch(`/api/messages/${phone}/export`);
-
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = `chat_${phone}_${new Date().toISOString().split('T')[0]}.txt`;
-
-                    document.body.appendChild(a);
-                    a.click();
-
-                    window.URL.revokeObjectURL(url);
-                } else {
-                    const data = await response.json();
-                    alert('Error al exportar conversación: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error al exportar conversación:', error);
-                alert('Error al conectar con el servidor');
-            }
-        }
-
-        // Reiniciar cliente
-        async function restartClient() {
-            try {
-                const response = await fetch('/admin/api/restart', {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('Cliente reiniciado correctamente');
-                } else {
-                    alert('Error al reiniciar cliente: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error al reiniciar cliente:', error);
-                alert('Error al conectar con el servidor');
-            }
-        }
-
-        // Eventos
-        document.addEventListener('DOMContentLoaded', function () {
-            // Cargar contactos al iniciar
+        // Cargar contactos al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
             loadContacts();
 
-            // Formulario de envío de mensaje
-            document.getElementById('messageForm').addEventListener('submit', function (e) {
-                e.preventDefault();
-
-                if (!currentContact) return;
-
-                const message = document.getElementById('messageInput').value.trim();
-                if (message) {
-                    sendMessage(currentContact.phone, message);
+            // Eventos
+            contactSearch.addEventListener('input', filterContacts);
+            refreshContactsBtn.addEventListener('click', loadContacts);
+            messageInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
                 }
             });
-
-            // Botón de enviar mensaje (modal)
-            document.getElementById('btnSendMessage').addEventListener('click', function () {
-                const sendMessageModal = new bootstrap.Modal(document.getElementById('sendMessageModal'));
-                sendMessageModal.show();
-            });
-
-            // Enviar mensaje desde modal
-            document.getElementById('btnSubmitSendMessage').addEventListener('click', async function () {
-                const phone = document.getElementById('phoneNumber').value.trim();
-                const message = document.getElementById('messageText').value.trim();
-
-                if (!phone || !message) {
-                    alert('Por favor completa todos los campos');
-                    return;
-                }
-
-                const success = await sendMessage(phone, message);
-
-                if (success) {
-                    // Cerrar modal
-                    const sendMessageModal = bootstrap.Modal.getInstance(document.getElementById('sendMessageModal'));
-                    sendMessageModal.hide();
-
-                    // Limpiar formulario
-                    document.getElementById('sendMessageForm').reset();
-
-                    // Recargar contactos
-                    loadContacts();
-                }
-            });
-
-            // Botón de reiniciar cliente
-            document.getElementById('btnRestartClient').addEventListener('click', function () {
-                const restartClientModal = new bootstrap.Modal(document.getElementById('restartClientModal'));
-                restartClientModal.show();
-            });
-
-            // Confirmar reinicio de cliente
-            document.getElementById('btnConfirmRestart').addEventListener('click', async function () {
-                await restartClient();
-
-                // Cerrar modal
-                const restartClientModal = bootstrap.Modal.getInstance(document.getElementById('restartClientModal'));
-                restartClientModal.hide();
-            });
-
-            // Botón de actualizar
-            document.getElementById('btnRefresh').addEventListener('click', function () {
-                loadContacts();
-
-                if (currentContact) {
-                    loadMessages(currentContact.phone);
-                }
-            });
-
-            // Búsqueda de contactos
-            document.getElementById('searchContact').addEventListener('input', function () {
-                const searchTerm = this.value.toLowerCase();
-
-                document.querySelectorAll('.contact-list-item').forEach(item => {
-                    const name = (item.querySelector('.contact-name').textContent || '').toLowerCase();
-                    const phone = item.dataset.phone.toLowerCase();
-
-                    if (name.includes(searchTerm) || phone.includes(searchTerm)) {
-                        item.style.display = 'block';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
-            });
+            sendButton.addEventListener('click', sendMessage);
+            confirmRestartBtn.addEventListener('click', restartClient);
         });
+
+        // Función para cargar contactos
+        function loadContacts() {
+            // Mostrar cargando y ocultar errores
+            loadingContacts.classList.remove('d-none');
+            contactsError.classList.add('d-none');
+            emptyContacts.classList.add('d-none');
+            contactList.innerHTML = ''; // Limpiar lista antes de cargar
+
+            fetch('/admin/api/contacts')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al cargar contactos');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    loadingContacts.classList.add('d-none');
+
+                    if (data.success) {
+                        contacts = data.data;
+
+                        if (contacts.length === 0) {
+                            emptyContacts.classList.remove('d-none');
+                        } else {
+                            renderContacts(contacts);
+                        }
+                    } else {
+                        throw new Error(data.message || 'Error al cargar contactos');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    loadingContacts.classList.add('d-none');
+                    contactsError.classList.remove('d-none');
+                });
+        }
+
+        // Función para renderizar contactos
+        function renderContacts(contactsToRender) {
+            contactList.innerHTML = '';
+
+            contactsToRender.forEach(contact => {
+                const contactElement = document.createElement('div');
+                contactElement.className = 'contact-item d-flex align-items-center';
+                contactElement.dataset.id = contact.id;
+
+                const avatarInitial = (contact.name || 'Usuario').charAt(0).toUpperCase();
+
+                contactElement.innerHTML = `
+                    <div class="avatar">${avatarInitial}</div>
+                    <div>
+                        <div class="fw-bold">${contact.name || 'Sin nombre'}</div>
+                        <small class="text-muted">${formatPhoneNumber(contact.id)}</small>
+                    </div>
+                `;
+
+                contactElement.addEventListener('click', () => {
+                    selectContact(contact);
+                });
+
+                contactList.appendChild(contactElement);
+            });
+        }
+
+        // Función para filtrar contactos
+        function filterContacts() {
+            const searchTerm = contactSearch.value.toLowerCase();
+
+            if (searchTerm === '') {
+                renderContacts(contacts);
+                return;
+            }
+
+            const filteredContacts = contacts.filter(contact => {
+                const name = (contact.name || '').toLowerCase();
+                const number = (contact.id || '').toLowerCase();
+                return name.includes(searchTerm) || number.includes(searchTerm);
+            });
+
+            renderContacts(filteredContacts);
+        }
+
+        // Función para seleccionar un contacto
+        function selectContact(contact) {
+            // Marcar como activo
+            document.querySelectorAll('.contact-item').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            const contactElement = document.querySelector(`.contact-item[data-id="${contact.id}"]`);
+            if (contactElement) {
+                contactElement.classList.add('active');
+            }
+
+            // Actualizar contacto actual
+            currentContactId = contact.id;
+            currentContactElement.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="avatar">${(contact.name || 'Usuario').charAt(0).toUpperCase()}</div>
+                    <div>
+                        <div class="fw-bold">${contact.name || 'Sin nombre'}</div>
+                        <small class="text-muted">${formatPhoneNumber(contact.id)}</small>
+                    </div>
+                </div>
+            `;
+
+            // Habilitar entrada de mensajes
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+
+            // Cargar mensajes
+            loadMessages(contact.id);
+        }
+
+        // Función para cargar mensajes
+        function loadMessages(contactId) {
+            messageContainer.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando mensajes...</span>
+                    </div>
+                    <p class="mt-2">Cargando conversación...</p>
+                </div>
+            `;
+
+            fetch(`/admin/api/messages/${contactId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al cargar mensajes');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        messages = data.data;
+
+                        if (messages.length === 0) {
+                            messageContainer.innerHTML = `
+                                <div class="empty-state">
+                                    <i class="bi bi-chat"></i>
+                                    <p>No hay mensajes en esta conversación</p>
+                                </div>
+                            `;
+                        } else {
+                            renderMessages(messages);
+                        }
+                    } else {
+                        throw new Error(data.message || 'Error al cargar mensajes');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    messageContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="bi bi-exclamation-triangle text-danger"></i>
+                            <p>Error al cargar la conversación</p>
+                            <small>${error.message}</small>
+                        </div>
+                    `;
+                });
+        }
+
+        // Función para renderizar mensajes
+        function renderMessages(messagesToRender) {
+            messageContainer.innerHTML = '';
+
+            messagesToRender.forEach(message => {
+                const isFromContact = message.from === currentContactId;
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${isFromContact ? 'received' : 'sent'}`;
+
+                let messageContent = '';
+
+                // Contenido del mensaje
+                if (message.body) {
+                    messageContent += `<div>${message.body}</div>`;
+                }
+
+                // Si tiene multimedia
+                if (message.hasMedia && message.media && message.media.length > 0) {
+                    const mediaFile = message.media[0];
+
+                    // Agregar ícono según tipo de archivo
+                    let mediaIcon = '';
+                    switch (mediaFile.fileType) {
+                        case 'image':
+                            mediaIcon = '<i class="bi bi-image text-primary"></i>';
+                            break;
+                        case 'audio':
+                            mediaIcon = '<i class="bi bi-file-earmark-music text-success"></i>';
+                            break;
+                        case 'video':
+                            mediaIcon = '<i class="bi bi-film text-danger"></i>';
+                            break;
+                        case 'document':
+                            mediaIcon = '<i class="bi bi-file-earmark-text text-info"></i>';
+                            break;
+                        default:
+                            mediaIcon = '<i class="bi bi-paperclip"></i>';
+                    }
+
+                    messageContent += `
+                        <div class="message-media">
+                            ${mediaIcon} <span>${mediaFile.filename || 'Archivo'}</span>
+                        </div>
+                    `;
+                }
+
+                // Añadir información de hora
+                const messageDate = new Date(message.createdAt);
+                const formattedTime = formatTime(messageDate);
+
+                messageContent += `
+                    <div class="message-info">
+                        <span>${formattedTime}</span>
+                    </div>
+                `;
+
+                messageElement.innerHTML = messageContent;
+                messageContainer.appendChild(messageElement);
+            });
+
+            // Scroll al final de la conversación
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+
+        // Función para enviar mensaje
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !currentContactId) return;
+
+            // Mostrar mensaje en la interfaz
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message sent';
+            messageElement.innerHTML = `
+                <div>${message}</div>
+                <div class="message-info">
+                    <span>Enviando...</span>
+                </div>
+            `;
+
+            // Limpiar entrada
+            messageInput.value = '';
+
+            // Mostrar en la interfaz
+            messageContainer.innerHTML = '';
+            messageContainer.appendChild(messageElement);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+
+            // Enviar al servidor
+            fetch('/admin/api/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    phone: currentContactId,
+                    message: message
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        messageElement.querySelector('.message-info').innerHTML = `
+                        <span>Enviado ${formatTime(new Date())}</span>
+                        <i class="bi bi-check-all text-primary ms-1"></i>
+                    `;
+                    } else {
+                        messageElement.querySelector('.message-info').innerHTML = `
+                        <span class="text-danger">Error al enviar</span>
+                        <i class="bi bi-exclamation-circle text-danger ms-1"></i>
+                    `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al enviar mensaje:', error);
+                    messageElement.querySelector('.message-info').innerHTML = `
+                    <span class="text-danger">Error al enviar</span>
+                    <i class="bi bi-exclamation-circle text-danger ms-1"></i>
+                `;
+                });
+        }
+
+        // Función para reiniciar el cliente
+        function restartClient() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('restartModal'));
+            modal.hide();
+
+            // Mostrar alerta
+            const alertElement = document.createElement('div');
+            alertElement.className = 'alert alert-warning alert-dismissible fade show';
+            alertElement.innerHTML = `
+                <strong>Reiniciando cliente...</strong> Por favor espera.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+
+            document.querySelector('.content').prepend(alertElement);
+
+            fetch('/admin/api/restart', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alertElement.className = 'alert alert-success alert-dismissible fade show';
+                        alertElement.innerHTML = `
+                        <strong>Cliente reiniciado correctamente.</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+
+                        // Recargar contactos
+                        setTimeout(() => {
+                            loadContacts();
+                        }, 2000);
+                    } else {
+                        throw new Error(data.message || 'Error al reiniciar cliente');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alertElement.className = 'alert alert-danger alert-dismissible fade show';
+                    alertElement.innerHTML = `
+                    <strong>Error al reiniciar cliente:</strong> ${error.message || 'Algo salió mal'}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                });
+        }
+
+        // Función para formatear número de teléfono
+        function formatPhoneNumber(number) {
+            if (!number) return '';
+            // Eliminar @c.us si existe
+            return number.replace('@c.us', '');
+        }
+
+        // Función para formatear hora
+        function formatTime(date) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
     </script>
 </body>
 

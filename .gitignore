@@ -10,6 +10,11 @@ session/
 .wwebjs_auth/
 .wwebjs_cache/
 
+# Archivos multimedia
+media_files/
+media_files/**
+media/
+
 # Logs
 logs
 *.log

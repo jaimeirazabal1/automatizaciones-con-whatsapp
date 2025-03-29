@@ -307,9 +307,10 @@ class WhatsAppService {
   /**
    * Guarda un archivo multimedia de un mensaje
    * @param {Message} message - Mensaje de WhatsApp que contiene multimedia
+   * @param {boolean} isTemp - Indica si el archivo es temporal (defecto: false)
    * @returns {Promise<string>} - Ruta al archivo guardado
    */
-  async saveMedia(message) {
+  async saveMedia(message, isTemp = false) {
     this.checkClient();
 
     try {
@@ -320,8 +321,16 @@ class WhatsAppService {
       // Descargar multimedia
       const media = await message.downloadMedia();
 
+      // Registrar información del tipo MIME para depuración
+      console.log(
+        `Media recibido - Tipo MIME: ${media.mimetype}, Filename: ${
+          media.filename || "Sin nombre"
+        }`
+      );
+
       // Determinar extensión basada en el mimetype
       const ext = this.getExtensionFromMimetype(media.mimetype);
+      console.log(`Extensión asignada: ${ext} para MIME: ${media.mimetype}`);
 
       // Generar nombre de archivo único
       const filename = media.filename || `${Date.now()}.${ext}`;
@@ -331,10 +340,11 @@ class WhatsAppService {
         media.data,
         filename,
         media.mimetype,
-        message.id.id
+        message.id.id,
+        isTemp
       );
 
-      console.log(`Archivo multimedia guardado: ${filePath}`);
+      console.log(`Archivo multimedia guardado en: ${filePath}`);
 
       return filePath;
     } catch (error) {
@@ -441,7 +451,22 @@ class WhatsAppService {
     try {
       return await this.client.getChats();
     } catch (error) {
-      console.error("Error al obtener todos los chats:", error);
+      console.error("Error al obtener chats:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene la lista de contactos de WhatsApp
+   * @returns {Promise<Array>} - Promesa con la lista de contactos
+   */
+  async getContacts() {
+    this.checkClient();
+
+    try {
+      return await this.client.getContacts();
+    } catch (error) {
+      console.error("Error al obtener contactos:", error);
       throw error;
     }
   }
