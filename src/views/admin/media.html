@@ -4,231 +4,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multimedia - Panel de Administración WhatsApp Bot</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Multimedia - WhatsApp Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        .sidebar {
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 100;
-            padding: 48px 0 0;
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        body {
             background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .sidebar-sticky {
-            height: calc(100vh - 48px);
-            overflow-x: hidden;
-            overflow-y: auto;
+        .sidebar {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            border-right: 1px solid #dee2e6;
+            position: fixed;
+            width: 250px;
         }
 
-        .nav-link {
-            font-weight: 500;
-            color: #333;
+        .content {
+            margin-left: 250px;
+            padding: 20px;
         }
 
-        .nav-link.active {
-            color: #2470dc;
-        }
-
-        .nav-link:hover {
-            color: #0d6efd;
-        }
-
-        .navbar-brand {
-            padding-top: .75rem;
-            padding-bottom: .75rem;
-            background-color: rgba(0, 0, 0, .25);
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
-        }
-
-        .card {
-            border-radius: 10px;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
-            margin-bottom: 1.5rem;
-        }
-
-        .media-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 1rem;
+        .header {
+            background-color: #25D366;
+            color: white;
+            padding: 15px;
+            margin-bottom: 20px;
         }
 
         .media-card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            border-radius: 10px;
             overflow: hidden;
-            transition: transform 0.3s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            height: 100%;
         }
 
         .media-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .media-img {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            background-color: #f0f0f0;
+        .media-thumbnail {
+            height: 200px;
+            background-color: #eee;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
         }
 
-        .media-img i {
-            font-size: 3rem;
-            color: #6c757d;
-        }
-
-        .media-img img {
+        .media-thumbnail img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
+        .media-thumbnail i {
+            font-size: 3rem;
+            color: #6c757d;
+        }
+
         .media-info {
-            padding: 1rem;
+            padding: 15px;
         }
 
-        .media-type {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 50px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
+        .media-type-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
         }
 
-        .media-type.image {
-            background-color: #d1e7dd;
-            color: #0f5132;
+        .filters {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
         }
 
-        .media-type.audio {
-            background-color: #cff4fc;
-            color: #055160;
+        .preview-modal .modal-body {
+            text-align: center;
+            padding: 0;
+            background-color: #000;
         }
 
-        .media-type.video {
-            background-color: #f8d7da;
-            color: #842029;
+        .preview-modal img,
+        .preview-modal video {
+            max-width: 100%;
+            max-height: 70vh;
+            margin: 0 auto;
         }
 
-        .media-type.document {
-            background-color: #e2e3e5;
-            color: #41464b;
-        }
-
-        .media-actions {
-            display: flex;
+        .preview-modal .modal-footer {
             justify-content: space-between;
-            margin-top: 0.5rem;
         }
 
-        .pagination-container {
+        .preview-modal audio {
+            width: 100%;
+        }
+
+        .file-icon {
+            font-size: 5rem;
+            margin: 2rem 0;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
             display: flex;
+            align-items: center;
             justify-content: center;
-            margin-top: 2rem;
+            z-index: 9999;
+            color: white;
+            flex-direction: column;
+        }
+
+        .loading-overlay .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
 
 <body>
-    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">WhatsApp Bot</a>
-        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse"
-            data-bs-target="#sidebarMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="w-100"></div>
-        <div class="navbar-nav">
-            <div class="nav-item text-nowrap">
-                <a class="nav-link px-3" href="/admin/logout">Cerrar sesión</a>
-            </div>
+    <div id="loadingOverlay" class="loading-overlay d-none">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Cargando...</span>
         </div>
-    </header>
+        <p>Procesando solicitud...</p>
+    </div>
 
-    <div class="container-fluid">
-        <div class="row">
-            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                <div class="position-sticky pt-3 sidebar-sticky">
+    <div class="header d-flex justify-content-between align-items-center">
+        <div>
+            <h2>WhatsApp Bot</h2>
+        </div>
+        <div>
+            <a href="/admin/logout" class="btn btn-light">Cerrar Sesión</a>
+        </div>
+    </div>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                <div class="sidebar">
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link" href="/admin">
-                                <i class="bi bi-speedometer2"></i> Dashboard
-                            </a>
+                            <a class="nav-link" href="/admin"><i class="bi bi-house"></i> Dashboard</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/admin/messages">
-                                <i class="bi bi-chat-dots"></i> Mensajes
-                            </a>
+                            <a class="nav-link" href="/admin/messages"><i class="bi bi-chat"></i> Mensajes</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="/admin/media">
-                                <i class="bi bi-images"></i> Multimedia
-                            </a>
+                            <a class="nav-link active" href="/admin/media"><i class="bi bi-image"></i> Multimedia</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/admin/settings">
-                                <i class="bi bi-gear"></i> Configuración
-                            </a>
+                            <a class="nav-link" href="/admin/settings"><i class="bi bi-gear"></i> Configuración</a>
                         </li>
                     </ul>
 
-                    <h6
-                        class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
-                        <span>Acciones rápidas</span>
-                    </h6>
+                    <hr>
+
+                    <h6 class="sidebar-heading px-3 mt-4 mb-1 text-muted">Acciones rápidas</h6>
                     <ul class="nav flex-column mb-2">
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="btnSendMessage">
+                            <a class="nav-link" href="#" id="sendMessageBtn">
                                 <i class="bi bi-send"></i> Enviar mensaje
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="btnRestartClient">
-                                <i class="bi bi-arrow-clockwise"></i> Reiniciar cliente
+                            <a class="nav-link" href="#" id="restartClientBtn" data-bs-toggle="modal"
+                                data-bs-target="#restartModal">
+                                <i class="bi bi-arrow-repeat"></i> Reiniciar cliente
                             </a>
                         </li>
                     </ul>
                 </div>
-            </nav>
+            </div>
 
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div
-                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Gestión Multimedia</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <div class="btn-group me-2">
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefresh">
-                                <i class="bi bi-arrow-repeat"></i> Actualizar
-                            </button>
-                        </div>
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="content">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 class="h2">Archivos Multimedia</h1>
+                        <button id="refreshBtn" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise"></i> Actualizar
+                        </button>
                     </div>
-                </div>
 
-                <div class="card mb-4">
-                    <div class="card-header">
+                    <!-- Filtros -->
+                    <div class="filters mb-4">
                         <div class="row">
-                            <div class="col-md-8">
-                                <h5 class="mb-0">Filtrar archivos</h5>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <button class="btn btn-sm btn-success" id="btnUpload">
-                                    <i class="bi bi-upload"></i> Subir archivo
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
                             <div class="col-md-3">
-                                <label for="filterType" class="form-label">Tipo</label>
-                                <select class="form-select" id="filterType">
+                                <label for="typeFilter" class="form-label">Tipo</label>
+                                <select id="typeFilter" class="form-select">
                                     <option value="">Todos</option>
                                     <option value="image">Imágenes</option>
                                     <option value="audio">Audio</option>
@@ -237,392 +213,458 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="sortBy" class="form-label">Ordenar por</label>
-                                <select class="form-select" id="sortBy">
-                                    <option value="createdAt">Fecha (reciente primero)</option>
-                                    <option value="fileSize">Tamaño (mayor primero)</option>
-                                    <option value="filename">Nombre (A-Z)</option>
+                                <label for="dateFilter" class="form-label">Periodo</label>
+                                <select id="dateFilter" class="form-select">
+                                    <option value="">Todo</option>
+                                    <option value="today">Hoy</option>
+                                    <option value="week">Esta semana</option>
+                                    <option value="month">Este mes</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <label for="limit" class="form-label">Mostrar</label>
-                                <select class="form-select" id="limit">
-                                    <option value="12">12 por página</option>
-                                    <option value="24">24 por página</option>
-                                    <option value="48">48 por página</option>
-                                </select>
+                            <div class="col-md-4">
+                                <label for="searchFilter" class="form-label">Buscar por nombre</label>
+                                <input type="text" id="searchFilter" class="form-control"
+                                    placeholder="Buscar archivo...">
                             </div>
-                            <div class="col-md-3 d-flex align-items-end">
-                                <button class="btn btn-primary w-100" id="btnApplyFilters">Aplicar filtros</button>
+                            <div class="col-md-2">
+                                <label class="form-label d-block">&nbsp;</label>
+                                <button id="applyFilters" class="btn btn-success w-100">Aplicar</button>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div id="mediaContainer" class="media-grid">
-                    <!-- Las tarjetas de archivos multimedia se cargarán aquí -->
-                    <div class="text-center py-5">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Cargando...</span>
+                    <!-- Resultados -->
+                    <div class="row" id="mediaContainer">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-3">Cargando archivos multimedia...</p>
                         </div>
-                        <p class="mt-2">Cargando archivos multimedia...</p>
                     </div>
-                </div>
 
-                <div class="pagination-container">
-                    <nav aria-label="Paginación">
-                        <ul class="pagination" id="pagination">
-                            <!-- La paginación se generará dinámicamente -->
+                    <!-- Paginación -->
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center" id="pagination">
+                            <!-- Se generará dinámicamente -->
                         </ul>
                     </nav>
                 </div>
-            </main>
-        </div>
-    </div>
-
-    <!-- Modal para subir archivo -->
-    <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="uploadModalLabel">Subir archivo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="uploadForm">
-                        <div class="mb-3">
-                            <label for="phone" class="form-label">Número de teléfono destino</label>
-                            <input type="text" class="form-control" id="phone" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="caption" class="form-label">Descripción (opcional)</label>
-                            <input type="text" class="form-control" id="caption">
-                        </div>
-                        <div class="mb-3">
-                            <label for="fileUpload" class="form-label">Archivo</label>
-                            <input type="file" class="form-control" id="fileUpload" required>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnSubmitUpload">Subir</button>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal para ver detalles -->
-    <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <!-- Modal de vista previa -->
+    <div class="modal fade preview-modal" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="detailsModalLabel">Detalles del archivo</h5>
+                    <h5 class="modal-title" id="previewModalLabel">Vista previa</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6" id="mediaPreview">
-                            <!-- Preview del archivo se cargará aquí -->
-                        </div>
-                        <div class="col-md-6">
-                            <h5 id="detailFilename">Nombre del archivo</h5>
-                            <p id="detailType">Tipo: <span>Imagen</span></p>
-                            <p id="detailSize">Tamaño: <span>123 KB</span></p>
-                            <p id="detailMime">MIME: <span>image/jpeg</span></p>
-                            <p id="detailDate">Fecha: <span>01/01/2023</span></p>
-                            <p id="detailId">ID: <span>abcd1234</span></p>
-                        </div>
-                    </div>
+                <div class="modal-body" id="previewContent">
+                    <!-- El contenido se generará dinámicamente -->
                 </div>
                 <div class="modal-footer">
-                    <a href="#" class="btn btn-primary" id="btnDownload" target="_blank">Descargar</a>
-                    <button type="button" class="btn btn-danger" id="btnDelete">Eliminar</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <div class="media-details" id="mediaDetails">
+                        <!-- Detalles del archivo -->
+                    </div>
+                    <div>
+                        <a href="#" class="btn btn-success" id="downloadBtn" download>
+                            <i class="bi bi-download"></i> Descargar
+                        </a>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap & Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Modal para reiniciar cliente -->
+    <div class="modal fade" id="restartModal" tabindex="-1" aria-labelledby="restartModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="restartModalLabel">Reiniciar Cliente de WhatsApp</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que quieres reiniciar el cliente de WhatsApp? Es posible que necesites volver a
+                        escanear el código QR.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="confirmRestart" class="btn btn-danger">Reiniciar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Variables globales
+        let mediaFiles = [];
         let currentPage = 1;
         let totalPages = 1;
+        let itemsPerPage = 12;
+        let activeFilters = {
+            type: '',
+            date: '',
+            search: ''
+        };
 
-        // Función para cargar archivos multimedia
-        async function loadMedia() {
-            try {
-                const type = document.getElementById('filterType').value;
-                const limit = document.getElementById('limit').value || 12;
+        // Elementos DOM
+        const mediaContainer = document.getElementById('mediaContainer');
+        const pagination = document.getElementById('pagination');
+        const typeFilter = document.getElementById('typeFilter');
+        const dateFilter = document.getElementById('dateFilter');
+        const searchFilter = document.getElementById('searchFilter');
+        const applyFilters = document.getElementById('applyFilters');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const previewModal = document.getElementById('previewModal');
+        const previewContent = document.getElementById('previewContent');
+        const mediaDetails = document.getElementById('mediaDetails');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const confirmRestartBtn = document.getElementById('confirmRestart');
+        const loadingOverlay = document.getElementById('loadingOverlay');
 
-                const mediaContainer = document.getElementById('mediaContainer');
-                mediaContainer.innerHTML = `
-          <div class="text-center py-5 w-100">
-            <div class="spinner-border" role="status">
-              <span class="visually-hidden">Cargando...</span>
-            </div>
-            <p class="mt-2">Cargando archivos multimedia...</p>
-          </div>
-        `;
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMedia();
 
-                const response = await fetch(`/api/media?type=${type}&page=${currentPage}&limit=${limit}`);
-                const data = await response.json();
+            // Eventos
+            applyFilters.addEventListener('click', () => {
+                activeFilters = {
+                    type: typeFilter.value,
+                    date: dateFilter.value,
+                    search: searchFilter.value.trim()
+                };
+                currentPage = 1;
+                loadMedia();
+            });
 
-                if (data.success) {
-                    const files = data.data.files;
-                    const pagination = data.data.pagination;
-
-                    totalPages = pagination.pages;
-
-                    // Limpiar contenedor
-                    mediaContainer.innerHTML = '';
-
-                    if (files.length === 0) {
-                        mediaContainer.innerHTML = `
-              <div class="text-center py-5 w-100">
-                <i class="bi bi-exclamation-circle" style="font-size: 3rem; color: #6c757d;"></i>
-                <p class="mt-2">No se encontraron archivos multimedia</p>
-              </div>
-            `;
-                        return;
-                    }
-
-                    // Crear tarjetas para cada archivo
-                    files.forEach(file => {
-                        const card = document.createElement('div');
-                        card.className = 'media-card';
-
-                        // Determinar icono según el tipo de archivo
-                        let icon = 'file-earmark';
-                        let typeClass = 'document';
-
-                        switch (file.fileType) {
-                            case 'image':
-                                icon = 'image';
-                                typeClass = 'image';
-                                break;
-                            case 'audio':
-                                icon = 'file-earmark-music';
-                                typeClass = 'audio';
-                                break;
-                            case 'video':
-                                icon = 'film';
-                                typeClass = 'video';
-                                break;
-                        }
-
-                        // Formatear tamaño
-                        const fileSize = formatFileSize(file.fileSize);
-
-                        // Formatear fecha
-                        const date = new Date(file.createdAt);
-                        const formattedDate = date.toLocaleDateString();
-
-                        // Mostrar vista previa si es una imagen
-                        let imgContent = `<i class="bi bi-${icon}"></i>`;
-                        if (file.fileType === 'image') {
-                            imgContent = `<img src="/api/media/download/${file._id}" alt="${file.filename}">`;
-                        }
-
-                        card.innerHTML = `
-              <div class="media-img">
-                ${imgContent}
-              </div>
-              <div class="media-info">
-                <span class="media-type ${typeClass}">${file.fileType}</span>
-                <h6 class="media-title">${truncateString(file.filename, 20)}</h6>
-                <small class="text-muted">${fileSize} - ${formattedDate}</small>
-                <div class="media-actions">
-                  <button class="btn btn-sm btn-outline-primary btn-view" data-id="${file._id}">
-                    <i class="bi bi-eye"></i>
-                  </button>
-                  <a href="/api/media/download/${file._id}" class="btn btn-sm btn-outline-success" target="_blank">
-                    <i class="bi bi-download"></i>
-                  </a>
-                  <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${file._id}">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </div>
-            `;
-
-                        mediaContainer.appendChild(card);
-
-                        // Añadir evento para ver detalles
-                        card.querySelector('.btn-view').addEventListener('click', () => {
-                            showMediaDetails(file);
-                        });
-
-                        // Añadir evento para eliminar
-                        card.querySelector('.btn-delete').addEventListener('click', () => {
-                            if (confirm(`¿Estás seguro de eliminar ${file.filename}?`)) {
-                                deleteMedia(file._id);
-                            }
-                        });
-                    });
-
-                    // Actualizar paginación
-                    updatePagination(pagination);
+            searchFilter.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    applyFilters.click();
                 }
-            } catch (error) {
-                console.error('Error al cargar archivos multimedia:', error);
-                document.getElementById('mediaContainer').innerHTML = `
-          <div class="text-center py-5 w-100">
-            <i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>
-            <p class="mt-2">Error al cargar archivos multimedia. Intenta de nuevo.</p>
-          </div>
-        `;
+            });
+
+            refreshBtn.addEventListener('click', loadMedia);
+            confirmRestartBtn.addEventListener('click', restartClient);
+        });
+
+        // Cargar archivos multimedia
+        function loadMedia() {
+            showLoading();
+
+            // Construir URL con filtros
+            let url = `/admin/api/media?page=${currentPage}&limit=${itemsPerPage}`;
+
+            if (activeFilters.type) {
+                url += `&type=${activeFilters.type}`;
             }
+
+            if (activeFilters.date) {
+                url += `&period=${activeFilters.date}`;
+            }
+
+            if (activeFilters.search) {
+                url += `&search=${encodeURIComponent(activeFilters.search)}`;
+            }
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al cargar los archivos multimedia');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    hideLoading();
+
+                    if (data.success) {
+                        mediaFiles = data.data.files || [];
+                        totalPages = data.data.totalPages || 1;
+
+                        renderMedia(mediaFiles);
+                        renderPagination();
+                    } else {
+                        throw new Error(data.message || 'Error al cargar los archivos multimedia');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Error:', error);
+
+                    mediaContainer.innerHTML = `
+                        <div class="col-12 text-center py-5">
+                            <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                            <p class="mt-3">Error al cargar los archivos multimedia: ${error.message}</p>
+                            <button class="btn btn-primary mt-3" id="retryBtn">
+                                <i class="bi bi-arrow-repeat"></i> Intentar de nuevo
+                            </button>
+                        </div>
+                    `;
+
+                    document.getElementById('retryBtn').addEventListener('click', loadMedia);
+                });
         }
 
-        // Función para actualizar paginación
-        function updatePagination(pagination) {
-            const paginationElement = document.getElementById('pagination');
-            paginationElement.innerHTML = '';
+        // Renderizar archivos multimedia
+        function renderMedia(files) {
+            if (files.length === 0) {
+                mediaContainer.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-images text-muted" style="font-size: 3rem;"></i>
+                        <p class="mt-3">No se encontraron archivos multimedia</p>
+                    </div>
+                `;
+                return;
+            }
 
-            if (pagination.pages <= 1) {
+            mediaContainer.innerHTML = '';
+
+            files.forEach(file => {
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-3 mb-4';
+
+                let thumbnailContent = '';
+                let typeBadge = '';
+
+                // Determinar icono y badge según el tipo
+                switch (file.fileType) {
+                    case 'image':
+                        thumbnailContent = `<img src="/media/images/${file.filename}" alt="${file.filename}" loading="lazy">`;
+                        typeBadge = '<span class="badge bg-primary media-type-badge">Imagen</span>';
+                        break;
+
+                    case 'audio':
+                        thumbnailContent = '<i class="bi bi-file-earmark-music"></i>';
+                        typeBadge = '<span class="badge bg-success media-type-badge">Audio</span>';
+                        break;
+
+                    case 'video':
+                        thumbnailContent = '<i class="bi bi-film"></i>';
+                        typeBadge = '<span class="badge bg-danger media-type-badge">Video</span>';
+                        break;
+
+                    case 'document':
+                        thumbnailContent = '<i class="bi bi-file-earmark-text"></i>';
+                        typeBadge = '<span class="badge bg-info media-type-badge">Documento</span>';
+                        break;
+
+                    default:
+                        thumbnailContent = '<i class="bi bi-file-earmark"></i>';
+                        typeBadge = '<span class="badge bg-secondary media-type-badge">Archivo</span>';
+                }
+
+                col.innerHTML = `
+                    <div class="media-card position-relative">
+                        ${typeBadge}
+                        <div class="media-thumbnail">
+                            ${thumbnailContent}
+                        </div>
+                        <div class="media-info">
+                            <h5 class="text-truncate">${getFileName(file.filename)}</h5>
+                            <p class="text-muted mb-1">
+                                <small>De: ${file.from ? formatPhone(file.from) : 'Desconocido'}</small>
+                            </p>
+                            <p class="text-muted mb-1">
+                                <small>${formatFileSize(file.fileSize || 0)}</small>
+                            </p>
+                            <p class="text-muted mb-0">
+                                <small>${new Date(file.createdAt).toLocaleString()}</small>
+                            </p>
+                            <div class="mt-3 d-flex justify-content-between">
+                                <button class="btn btn-sm btn-outline-primary preview-btn" data-file='${JSON.stringify(file)}'>
+                                    <i class="bi bi-eye"></i> Ver
+                                </button>
+                                <a href="/media/${file.fileType === 'image' ? 'images/' : file.fileType === 'audio' ? 'audio/' : file.fileType === 'video' ? 'video/' : file.fileType === 'document' ? 'documents/' : 'others/'}${file.filename}" download="${file.filename}" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-download"></i> Descargar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                mediaContainer.appendChild(col);
+            });
+
+            // Añadir eventos a los botones de vista previa
+            document.querySelectorAll('.preview-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const fileData = JSON.parse(btn.getAttribute('data-file'));
+                    openPreview(fileData);
+                });
+            });
+        }
+
+        // Abrir vista previa
+        function openPreview(file) {
+            const modalTitle = document.getElementById('previewModalLabel');
+            modalTitle.textContent = getFileName(file.filename);
+
+            // Preparar contenido según tipo de archivo
+            let content = '';
+
+            // Construir ruta base según el tipo
+            const basePath = `/media/${file.fileType === 'image' ? 'images/' : file.fileType === 'audio' ? 'audio/' : file.fileType === 'video' ? 'video/' : file.fileType === 'document' ? 'documents/' : 'others/'}`;
+
+            switch (file.fileType) {
+                case 'image':
+                    content = `<img src="${basePath}${file.filename}" alt="${file.filename}" class="img-fluid">`;
+                    break;
+
+                case 'audio':
+                    content = `
+                        <div class="d-flex flex-column align-items-center p-4">
+                            <i class="bi bi-file-earmark-music text-success file-icon"></i>
+                            <audio controls src="${basePath}${file.filename}"></audio>
+                        </div>
+                    `;
+                    break;
+
+                case 'video':
+                    content = `
+                        <video controls>
+                            <source src="${basePath}${file.filename}" type="video/mp4">
+                            Tu navegador no soporta videos HTML5.
+                        </video>
+                    `;
+                    break;
+
+                default:
+                    content = `
+                        <div class="d-flex flex-column align-items-center p-4 text-center">
+                            <i class="bi bi-file-earmark-text text-primary file-icon"></i>
+                            <p>Este tipo de archivo no puede previsualizarse.</p>
+                            <p class="text-muted">${getFileExtension(file.filename).toUpperCase()}</p>
+                        </div>
+                    `;
+            }
+
+            previewContent.innerHTML = content;
+
+            // Detalles del archivo
+            mediaDetails.innerHTML = `
+                <div>
+                    <strong>Tamaño:</strong> ${formatFileSize(file.fileSize || 0)}<br>
+                    <strong>Fecha:</strong> ${new Date(file.createdAt).toLocaleString()}<br>
+                    <strong>De:</strong> ${file.from ? formatPhone(file.from) : 'Desconocido'}<br>
+                    <strong>Tipo:</strong> ${file.mimetype || file.fileType}
+                </div>
+            `;
+
+            // Botón de descarga
+            downloadBtn.href = `${basePath}${file.filename}`;
+            downloadBtn.download = file.filename;
+
+            // Mostrar modal
+            const modal = new bootstrap.Modal(previewModal);
+            modal.show();
+        }
+
+        // Renderizar paginación
+        function renderPagination() {
+            pagination.innerHTML = '';
+
+            if (totalPages <= 1) {
                 return;
             }
 
             // Botón anterior
-            const prevLi = document.createElement('li');
-            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-            prevLi.innerHTML = `
-        <a class="page-link" href="#" aria-label="Anterior">
-          <span aria-hidden="true">&laquo;</span>
-        </a>
-      `;
+            const prevBtn = document.createElement('li');
+            prevBtn.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevBtn.innerHTML = `
+                <a class="page-link" href="#" aria-label="Anterior">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            `;
 
             if (currentPage > 1) {
-                prevLi.addEventListener('click', () => {
+                prevBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
                     currentPage--;
                     loadMedia();
                 });
             }
 
-            paginationElement.appendChild(prevLi);
+            pagination.appendChild(prevBtn);
 
             // Páginas
-            for (let i = 1; i <= pagination.pages; i++) {
-                const pageLi = document.createElement('li');
-                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
-                pageLi.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+            const maxPagesToShow = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+            let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
 
-                pageLi.addEventListener('click', () => {
-                    currentPage = i;
-                    loadMedia();
-                });
+            if (endPage - startPage + 1 < maxPagesToShow) {
+                startPage = Math.max(1, endPage - maxPagesToShow + 1);
+            }
 
-                paginationElement.appendChild(pageLi);
+            for (let i = startPage; i <= endPage; i++) {
+                const pageItem = document.createElement('li');
+                pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageItem.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+
+                if (i !== currentPage) {
+                    pageItem.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        currentPage = i;
+                        loadMedia();
+                    });
+                }
+
+                pagination.appendChild(pageItem);
             }
 
             // Botón siguiente
-            const nextLi = document.createElement('li');
-            nextLi.className = `page-item ${currentPage === pagination.pages ? 'disabled' : ''}`;
-            nextLi.innerHTML = `
-        <a class="page-link" href="#" aria-label="Siguiente">
-          <span aria-hidden="true">&raquo;</span>
-        </a>
-      `;
+            const nextBtn = document.createElement('li');
+            nextBtn.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextBtn.innerHTML = `
+                <a class="page-link" href="#" aria-label="Siguiente">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            `;
 
-            if (currentPage < pagination.pages) {
-                nextLi.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                nextBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
                     currentPage++;
                     loadMedia();
                 });
             }
 
-            paginationElement.appendChild(nextLi);
+            pagination.appendChild(nextBtn);
         }
 
-        // Mostrar detalles de un archivo
-        function showMediaDetails(file) {
-            // Actualizar información en el modal
-            document.getElementById('detailFilename').textContent = file.filename;
-            document.getElementById('detailType').innerHTML = `Tipo: <span>${file.fileType}</span>`;
-            document.getElementById('detailSize').innerHTML = `Tamaño: <span>${formatFileSize(file.fileSize)}</span>`;
-            document.getElementById('detailMime').innerHTML = `MIME: <span>${file.mimetype}</span>`;
+        // Función para reiniciar cliente
+        function restartClient() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('restartModal'));
+            modal.hide();
 
-            const date = new Date(file.createdAt);
-            document.getElementById('detailDate').innerHTML = `Fecha: <span>${date.toLocaleString()}</span>`;
-            document.getElementById('detailId').innerHTML = `ID: <span>${file._id}</span>`;
+            showLoading();
 
-            // Actualizar enlace de descarga
-            document.getElementById('btnDownload').href = `/api/media/download/${file._id}`;
+            fetch('/admin/api/restart', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
 
-            // Configurar botón de eliminar
-            document.getElementById('btnDelete').onclick = () => {
-                if (confirm(`¿Estás seguro de eliminar ${file.filename}?`)) {
-                    deleteMedia(file._id);
-                    const detailsModal = bootstrap.Modal.getInstance(document.getElementById('detailsModal'));
-                    detailsModal.hide();
-                }
-            };
-
-            // Mostrar vista previa según el tipo de archivo
-            const previewContainer = document.getElementById('mediaPreview');
-
-            switch (file.fileType) {
-                case 'image':
-                    previewContainer.innerHTML = `<img src="/api/media/download/${file._id}" class="img-fluid" alt="${file.filename}">`;
-                    break;
-                case 'audio':
-                    previewContainer.innerHTML = `
-            <audio controls class="w-100">
-              <source src="/api/media/download/${file._id}" type="${file.mimetype}">
-              Tu navegador no soporta el elemento audio.
-            </audio>
-            <div class="text-center mt-3">
-              <i class="bi bi-file-earmark-music" style="font-size: 6rem; color: #0d6efd;"></i>
-            </div>
-          `;
-                    break;
-                case 'video':
-                    previewContainer.innerHTML = `
-            <video controls class="w-100">
-              <source src="/api/media/download/${file._id}" type="${file.mimetype}">
-              Tu navegador no soporta el elemento video.
-            </video>
-          `;
-                    break;
-                default:
-                    previewContainer.innerHTML = `
-            <div class="text-center">
-              <i class="bi bi-file-earmark" style="font-size: 6rem; color: #6c757d;"></i>
-              <p class="mt-3">Vista previa no disponible para este tipo de archivo</p>
-            </div>
-          `;
-            }
-
-            // Mostrar modal
-            const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
-            detailsModal.show();
-        }
-
-        // Eliminar un archivo
-        async function deleteMedia(id) {
-            try {
-                const response = await fetch(`/api/media/${id}`, {
-                    method: 'DELETE'
+                    if (data.success) {
+                        showAlert('success', 'Cliente reiniciado correctamente');
+                    } else {
+                        throw new Error(data.message || 'Error al reiniciar cliente');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Error:', error);
+                    showAlert('danger', `Error al reiniciar cliente: ${error.message}`);
                 });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('Archivo eliminado correctamente');
-                    loadMedia(); // Recargar la lista
-                } else {
-                    alert('Error al eliminar archivo: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error al eliminar archivo:', error);
-                alert('Error al conectar con el servidor');
-            }
         }
 
-        // Formatear tamaño de archivo
+        // Funciones auxiliares
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
 
@@ -633,74 +675,48 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        // Truncar cadenas largas
-        function truncateString(str, maxLength) {
-            if (str.length <= maxLength) return str;
-            return str.substring(0, maxLength - 3) + '...';
+        function getFileName(path) {
+            if (!path) return 'Desconocido';
+            return path.split('/').pop();
         }
 
-        // Subir archivo
-        document.getElementById('btnSubmitUpload').addEventListener('click', async () => {
-            const fileInput = document.getElementById('fileUpload');
+        function getFileExtension(filename) {
+            return filename.split('.').pop();
+        }
 
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Por favor selecciona un archivo');
-                return;
-            }
+        function formatPhone(phone) {
+            if (!phone) return 'Desconocido';
+            return phone.replace('@c.us', '');
+        }
 
-            const formData = new FormData();
-            formData.append('phone', document.getElementById('phone').value);
-            formData.append('caption', document.getElementById('caption').value || '');
-            formData.append('file', fileInput.files[0]);
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
 
-            try {
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
+            document.querySelector('.content').prepend(alertDiv);
 
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('Archivo subido y enviado correctamente');
-                    const uploadModal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
-                    uploadModal.hide();
-
-                    // Limpiar formulario
-                    document.getElementById('uploadForm').reset();
-
-                    // Recargar lista de archivos
-                    loadMedia();
+            // Auto-cerrar después de 5 segundos
+            setTimeout(() => {
+                const alert = bootstrap.Alert.getInstance(alertDiv);
+                if (alert) {
+                    alert.close();
                 } else {
-                    alert('Error al subir archivo: ' + data.message);
+                    alertDiv.remove();
                 }
-            } catch (error) {
-                console.error('Error al subir archivo:', error);
-                alert('Error al conectar con el servidor');
-            }
-        });
+            }, 5000);
+        }
 
-        // Mostrar modal de subida
-        document.getElementById('btnUpload').addEventListener('click', () => {
-            const uploadModal = new bootstrap.Modal(document.getElementById('uploadModal'));
-            uploadModal.show();
-        });
+        function showLoading() {
+            loadingOverlay.classList.remove('d-none');
+        }
 
-        // Aplicar filtros
-        document.getElementById('btnApplyFilters').addEventListener('click', () => {
-            currentPage = 1;
-            loadMedia();
-        });
-
-        // Botón de actualizar
-        document.getElementById('btnRefresh').addEventListener('click', () => {
-            loadMedia();
-        });
-
-        // Cargar datos al iniciar
-        document.addEventListener('DOMContentLoaded', function () {
-            loadMedia();
-        });
+        function hideLoading() {
+            loadingOverlay.classList.add('d-none');
+        }
     </script>
 </body>
 

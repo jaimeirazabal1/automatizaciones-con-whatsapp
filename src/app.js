@@ -55,376 +55,75 @@ client.on("ready", async () => {
   await schedulerService.init();
 });
 
-// Evento cuando se recibe un mensaje
+// Evento de mensajes
 client.on("message", async (msg) => {
-  console.log("Mensaje recibido:", msg);
+  console.log("Mensaje recibido:", msg.from);
+
+  // Evitar procesar mensajes del propio bot o antiguos
+  if (msg.fromMe || (msg._data && msg._data.isEphemeral)) {
+    return;
+  }
+
+  // Asegurar que msg.body nunca sea undefined o null
+  const messageBody = msg.body || "";
+
+  // Para comandos, el cuerpo debe empezar con !
+  const isCommand = messageBody.startsWith("!");
 
   try {
-    // Asegurarse de que body nunca sea undefined
-    const messageBody = msg.body || "";
-    const isCommand = messageBody.startsWith("!");
-
     // Guardar mensaje en la base de datos
     const message = new Message({
       messageId: msg.id.id,
-      body: messageBody,
       from: msg.from,
+      fromName: msg._data.notifyName,
       to: msg.to,
+      body: messageBody,
       hasMedia: msg.hasMedia,
-      isCommand: isCommand,
-      command: isCommand ? messageBody.split(" ")[0] : null,
+      timestamp: msg.timestamp * 1000, // Convertir a milisegundos
     });
 
-    await message.save();
+    const savedMessage = await message.save();
+    console.log("Mensaje guardado en la base de datos.");
 
-    // Procesar archivo multimedia si existe
-    let mediaPath = null;
-    let mediaFile = null;
+    // Emitir evento para actualización en tiempo real para todos los admins suscritos
+    if (io) {
+      // Determinar si el mensaje es entrante o saliente
+      const direction = msg.fromMe ? "outgoing" : "incoming";
+
+      // Buscar administradores suscritos a esta conversación
+      const subscribedAdmins = Object.entries(adminConnections)
+        .filter(([_, adminData]) =>
+          adminData.subscribedChats.includes(msg.from)
+        )
+        .map(([socketId, _]) => socketId);
+
+      console.log("subscribedAdmins", subscribedAdmins);
+      // Si hay administradores suscritos, enviar el mensaje en tiempo real
+      if (subscribedAdmins.length > 0) {
+        const messageData = {
+          ...savedMessage.toObject(),
+          direction,
+        };
+        console.log("messageData", messageData);
+        subscribedAdmins.forEach((socketId) => {
+          io.to(socketId).emit("new_message", messageData);
+        });
+
+        console.log(
+          `Mensaje emitido en tiempo real a ${subscribedAdmins.length} administradores`
+        );
+      }
+    }
+
+    // Procesar archivos multimedia si los hay
     if (msg.hasMedia) {
-      try {
-        // Guardar archivos permanentemente (false indica que no es temporal)
-        mediaPath = await whatsappService.saveMedia(msg, false);
-        console.log(`Archivo multimedia guardado en: ${mediaPath}`);
-
-        // Obtener información del archivo multimedia
-        try {
-          const media = await msg.downloadMedia();
-
-          if (media) {
-            const fileType = MediaHandler.getExtensionFromMimetype(
-              media.mimetype
-            );
-
-            // Verificar si el mensaje no es un comando para procesar el archivo automáticamente
-            if (!isCommand) {
-              // Responder con confirmación según el tipo de archivo
-              if (media.mimetype.startsWith("image/")) {
-                await msg.reply(
-                  `✅ Imagen recibida y guardada correctamente.\nPuedes acceder a ella usando la referencia: ${message._id}`
-                );
-              } else if (
-                media.mimetype.startsWith("application/") ||
-                media.mimetype === "text/plain"
-              ) {
-                await msg.reply(
-                  `✅ Documento recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
-                );
-              } else if (media.mimetype.startsWith("audio/")) {
-                await msg.reply(
-                  `✅ Audio recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
-                );
-              } else if (media.mimetype.startsWith("video/")) {
-                await msg.reply(
-                  `✅ Video recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
-                );
-              } else {
-                await msg.reply(
-                  `✅ Archivo recibido y guardado correctamente.\nPuedes acceder a él usando la referencia: ${message._id}`
-                );
-              }
-            }
-          } else {
-            console.error(
-              "Error: media es undefined después de downloadMedia()"
-            );
-            await msg.reply(
-              `✅ Archivo recibido y guardado correctamente, pero no se puede determinar el tipo.\nPuedes acceder a él usando la referencia: ${message._id}`
-            );
-          }
-        } catch (mediaDownloadError) {
-          console.error(
-            "Error al descargar multimedia para procesar:",
-            mediaDownloadError
-          );
-          await msg.reply(
-            `✅ Archivo recibido y guardado correctamente, pero hubo un problema al procesarlo.\nPuedes acceder a él usando la referencia: ${message._id}`
-          );
-        }
-      } catch (mediaError) {
-        console.error("Error al guardar archivo multimedia:", mediaError);
-      }
+      await processMessageMedia(msg, savedMessage);
     }
 
-    // ----- COMANDOS BÁSICOS -----
-
-    // Respuesta a comando !ping
-    if (messageBody === "!ping") {
-      msg.reply("pong");
+    // Procesar comandos
+    if (isCommand) {
+      await handleCommand(msg, messageBody);
     }
-
-    // ----- COMANDOS DE AYUDA -----
-
-    // Comando de ayuda
-    else if (messageBody === "!ayuda" || messageBody === "!help") {
-      const helpMessage = `*Comandos disponibles:*
-
-*Comandos Básicos:*
-!ping - Prueba de conexión
-!ayuda - Muestra este mensaje
-
-*Comandos Multimedia:*
-!sticker - Convierte una imagen en sticker (adjunta imagen)
-!imagen <url> - Envía una imagen desde una URL
-!documento <url> - Envía un documento desde una URL
-!audio <url> - Envía un audio (adjunta al mensaje)
-!info - Muestra información del mensaje (útil para multimedia)
-!mime - Muestra información detallada del tipo MIME (adjunta archivo)
-!archivos - Lista los últimos 5 archivos que enviaste
-!reenviar <id> - Reenvía un archivo usando su ID de referencia`;
-
-      msg.reply(helpMessage);
-    }
-
-    // ----- COMANDOS MULTIMEDIA -----
-
-    // Comando para convertir imagen a sticker
-    else if (messageBody === "!sticker" && msg.hasMedia) {
-      if (!mediaPath) {
-        msg.reply("Error al procesar la imagen para sticker");
-        return;
-      }
-
-      try {
-        const media = MessageMedia.fromFilePath(mediaPath);
-        await msg.reply(media, null, { sendMediaAsSticker: true });
-      } catch (stickerError) {
-        console.error("Error al crear sticker:", stickerError);
-        msg.reply(
-          "No se pudo crear el sticker. Asegúrate que sea una imagen válida."
-        );
-      }
-    }
-
-    // Comando para enviar imagen desde URL
-    else if (messageBody.startsWith("!imagen ")) {
-      const url = messageBody.slice(8).trim();
-      if (!url) {
-        msg.reply("Por favor proporciona una URL válida. Uso: !imagen <url>");
-        return;
-      }
-
-      try {
-        await whatsappService.sendMediaFromUrl(
-          msg.from,
-          url,
-          "Imagen solicitada"
-        );
-      } catch (error) {
-        console.error("Error al enviar imagen desde URL:", error);
-        msg.reply(
-          "No se pudo enviar la imagen. Verifica que la URL sea válida."
-        );
-      }
-    }
-
-    // Comando para enviar documento desde URL
-    else if (messageBody.startsWith("!documento ")) {
-      const parts = messageBody.slice(11).trim().split(" ");
-      let url, filename;
-
-      if (parts.length >= 2) {
-        url = parts[0];
-        filename = parts.slice(1).join(" ");
-      } else {
-        url = parts[0];
-        // Extraer nombre de archivo de la URL
-        filename = url.split("/").pop();
-      }
-
-      if (!url) {
-        msg.reply(
-          "Por favor proporciona una URL válida. Uso: !documento <url> [nombre_archivo]"
-        );
-        return;
-      }
-
-      try {
-        const media = await MediaHandler.fromUrl(url);
-        if (filename) {
-          media.filename = filename;
-        }
-
-        await msg.reply(media, null, { sendMediaAsDocument: true });
-      } catch (error) {
-        console.error("Error al enviar documento desde URL:", error);
-        msg.reply(
-          "No se pudo enviar el documento. Verifica que la URL sea válida."
-        );
-      }
-    }
-
-    // Comando para enviar audio (responder a un mensaje de audio)
-    else if (messageBody === "!audio" && msg.hasQuotedMsg) {
-      const quotedMsg = await msg.getQuotedMessage();
-
-      if (!quotedMsg.hasMedia) {
-        msg.reply("El mensaje citado no contiene un archivo de audio.");
-        return;
-      }
-
-      try {
-        // Guardar el audio permanentemente (false indica que no es temporal)
-        const audioPath = await whatsappService.saveMedia(quotedMsg, false);
-        await whatsappService.sendAudio(msg.from, audioPath, true);
-
-        // Nota: Ya no necesitamos eliminar el archivo porque no es temporal
-      } catch (error) {
-        console.error("Error al procesar audio:", error);
-        msg.reply("No se pudo procesar el audio.");
-      }
-    }
-
-    // Comando para mostrar información del mensaje
-    else if (messageBody === "!info") {
-      let info = `*Información del mensaje:*\n`;
-      info += `ID: ${msg.id.id}\n`;
-      info += `De: ${msg.from}\n`;
-      info += `Tipo: ${msg.type}\n`;
-      info += `Hora: ${msg.timestamp}\n`;
-      info += `Tiene multimedia: ${msg.hasMedia ? "Sí" : "No"}\n`;
-
-      if (msg.hasMedia) {
-        const media = await msg.downloadMedia();
-        info += `Tipo multimedia: ${media.mimetype}\n`;
-        const extension = MediaHandler.getExtensionFromMimetype(media.mimetype);
-        info += `Extensión detectada: ${extension}\n`;
-        if (media.filename) {
-          info += `Nombre archivo: ${media.filename}\n`;
-        }
-      }
-
-      msg.reply(info);
-    }
-
-    // Comando para depurar tipos MIME
-    else if (messageBody === "!mime" && msg.hasMedia) {
-      try {
-        const media = await msg.downloadMedia();
-        const mimetype = media.mimetype;
-        const extension = MediaHandler.getExtensionFromMimetype(mimetype);
-
-        let debugInfo = `*Información de MIME:*\n`;
-        debugInfo += `MIME detectado: ${mimetype}\n`;
-        debugInfo += `Extensión asignada: ${extension}\n`;
-
-        // Guardar el archivo para verificar
-        const tempPath = await MediaHandler.saveMedia(
-          media.data,
-          `debug_${Date.now()}.${extension}`,
-          mimetype,
-          msg.id.id,
-          false // No es temporal
-        );
-
-        debugInfo += `Archivo guardado en: ${tempPath}\n`;
-        debugInfo += `Este comando ayuda a los desarrolladores a mejorar la detección de archivos.`;
-
-        msg.reply(debugInfo);
-      } catch (error) {
-        console.error("Error al depurar MIME:", error);
-        msg.reply("Error al procesar la información MIME.");
-      }
-    }
-
-    // Comando para reenviar un archivo multimedia usando una referencia
-    else if (messageBody.startsWith("!reenviar ")) {
-      const referenceId = messageBody.slice(10).trim();
-
-      if (!referenceId) {
-        msg.reply(
-          "Por favor proporciona el ID de referencia del mensaje. Uso: !reenviar <id>"
-        );
-        return;
-      }
-
-      try {
-        // Buscar el mensaje por ID
-        const savedMessage = await Message.findById(referenceId);
-
-        if (!savedMessage || !savedMessage.hasMedia) {
-          msg.reply(
-            "No se encontró ningún archivo multimedia con esa referencia."
-          );
-          return;
-        }
-
-        // Buscar los archivos multimedia asociados
-        const mediaFiles = await MediaHandler.findByMessageId(
-          savedMessage.messageId
-        );
-
-        if (!mediaFiles || mediaFiles.length === 0) {
-          msg.reply(
-            "El archivo multimedia no está disponible o ha sido eliminado."
-          );
-          return;
-        }
-
-        // Enviar cada archivo encontrado
-        for (const file of mediaFiles) {
-          const media = MediaHandler.fromFilePath(file.filePath);
-
-          // Enviar según el tipo de archivo
-          if (file.fileType === "image") {
-            await msg.reply(media, msg.from, { caption: "Imagen reenviada" });
-          } else if (file.fileType === "document") {
-            await msg.reply(media, msg.from, { sendMediaAsDocument: true });
-          } else if (file.fileType === "audio") {
-            await msg.reply(media, msg.from, {
-              sendAudioAsVoice: file.mimetype.includes("ogg"),
-            });
-          } else if (file.fileType === "video") {
-            await msg.reply(media, msg.from);
-          } else {
-            await msg.reply(media, msg.from);
-          }
-        }
-      } catch (error) {
-        console.error("Error al reenviar archivo multimedia:", error);
-        msg.reply("No se pudo reenviar el archivo multimedia.");
-      }
-    }
-
-    // Comando para listar archivos multimedia recibidos
-    else if (messageBody === "!archivos") {
-      try {
-        // Obtener últimos 5 mensajes con multimedia del remitente
-        const messages = await Message.find({
-          from: msg.from,
-          hasMedia: true,
-        })
-          .sort({ createdAt: -1 })
-          .limit(5);
-
-        if (!messages || messages.length === 0) {
-          msg.reply("No has enviado archivos multimedia recientemente.");
-          return;
-        }
-
-        let response = "*Tus archivos multimedia recientes:*\n\n";
-
-        for (const message of messages) {
-          const mediaFiles = await MediaHandler.findByMessageId(
-            message.messageId
-          );
-          const fileType =
-            mediaFiles.length > 0 ? mediaFiles[0].fileType : "desconocido";
-
-          response += `ID: ${message._id}\n`;
-          response += `Tipo: ${fileType}\n`;
-          response += `Fecha: ${message.createdAt.toLocaleString()}\n`;
-          response += `Para reenviar: !reenviar ${message._id}\n`;
-          response += "\n";
-        }
-
-        msg.reply(response);
-      } catch (error) {
-        console.error("Error al listar archivos multimedia:", error);
-        msg.reply("No se pudieron recuperar los archivos multimedia.");
-      }
-    }
-
-    // Ya no limpiaremos archivos temporales, los conservamos
   } catch (error) {
     console.error("Error al procesar mensaje:", error);
   }
@@ -566,6 +265,365 @@ app.post("/api/sendMedia", async (req, res) => {
 });
 
 // Iniciar el servidor
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
+
+// Configuración de Socket.IO para mensajes en tiempo real
+const io = require("socket.io")(server);
+
+// Guardar conexiones activas de administradores
+const adminConnections = {};
+
+// Evento cuando un cliente se conecta
+io.on("connection", (socket) => {
+  console.log("Cliente conectado a Socket.IO:", socket.id);
+
+  // Autenticar al administrador
+  socket.on("admin_auth", (token) => {
+    // Verificar el token de administrador (mismo método usado en checkAuth)
+    if (token && token.length > 32) {
+      console.log("Administrador autenticado:", socket.id);
+      adminConnections[socket.id] = {
+        authenticated: true,
+        subscribedChats: [], // Inicializar el array de chats suscritos
+      };
+      socket.emit("auth_success");
+    } else {
+      socket.emit("auth_error", { message: "Autenticación fallida" });
+    }
+  });
+
+  // Suscribirse a mensajes de un contacto específico
+  socket.on("subscribe_chat", (contactId) => {
+    if (adminConnections[socket.id]?.authenticated) {
+      console.log(
+        `Admin ${socket.id} suscrito a conversación con: ${contactId}`
+      );
+
+      // Añadir este chat a la lista de suscripciones del administrador
+      if (!adminConnections[socket.id].subscribedChats) {
+        adminConnections[socket.id].subscribedChats = [];
+      }
+
+      // Verificar si ya está suscrito para evitar duplicados
+      if (!adminConnections[socket.id].subscribedChats.includes(contactId)) {
+        adminConnections[socket.id].subscribedChats.push(contactId);
+      }
+
+      socket.join(`chat:${contactId}`);
+
+      console.log(
+        "Suscripciones actuales:",
+        adminConnections[socket.id].subscribedChats
+      );
+    }
+  });
+
+  // Dejar de seguir un chat
+  socket.on("unsubscribe_chat", (contactId) => {
+    if (
+      adminConnections[socket.id] &&
+      adminConnections[socket.id].subscribedChats
+    ) {
+      // Eliminar este chat de las suscripciones
+      adminConnections[socket.id].subscribedChats = adminConnections[
+        socket.id
+      ].subscribedChats.filter((chat) => chat !== contactId);
+
+      console.log(`Admin ${socket.id} canceló suscripción a: ${contactId}`);
+    }
+    socket.leave(`chat:${contactId}`);
+  });
+
+  // Enviar mensaje desde el panel de administración
+  socket.on("send_message", async (data) => {
+    if (!adminConnections[socket.id]?.authenticated) {
+      return socket.emit("error", { message: "No autenticado" });
+    }
+
+    try {
+      const { contactId, message } = data;
+      const result = await whatsappService.sendTextMessage(contactId, message);
+
+      // Crear registro en la base de datos
+      const messageRecord = new Message({
+        messageId: result.id.id,
+        body: message,
+        from: client.info.wid._serialized,
+        to: contactId,
+        hasMedia: false,
+        isCommand: false,
+        direction: "outgoing",
+      });
+
+      await messageRecord.save();
+
+      // Notificar al admin que el mensaje se envió correctamente
+      socket.emit("message_sent", {
+        success: true,
+        messageId: result.id.id,
+        timestamp: Date.now(),
+      });
+
+      // Notificar a todos los admins que están viendo esta conversación
+      io.to(`chat:${contactId}`).emit("new_message", {
+        id: messageRecord._id,
+        messageId: result.id.id,
+        body: message,
+        from: client.info.wid._serialized,
+        to: contactId,
+        timestamp: Date.now(),
+        direction: "outgoing",
+      });
+    } catch (error) {
+      console.error("Error al enviar mensaje desde el panel:", error);
+      socket.emit("error", { message: "Error al enviar mensaje" });
+    }
+  });
+
+  // Desconexión
+  socket.on("disconnect", () => {
+    console.log("Cliente desconectado:", socket.id);
+    delete adminConnections[socket.id];
+  });
+});
+
+// Añadir ruta estática para acceder a los archivos multimedia (protegida por el middleware de autenticación)
+const mediaAuthMiddleware = (req, res, next) => {
+  const token = req.cookies["admin_token"] || req.query.token;
+  if (!token || token.length < 32) {
+    return res.status(401).send("No autorizado");
+  }
+  next();
+};
+
+// Ruta estática para acceder a los archivos multimedia
+app.use(
+  "/media",
+  mediaAuthMiddleware,
+  express.static(path.resolve(process.cwd(), "media_files"))
+);
+
+// Función para procesar archivos multimedia de los mensajes
+async function processMessageMedia(msg, savedMessage) {
+  try {
+    // Guardar archivos permanentemente (false indica que no es temporal)
+    const mediaPath = await whatsappService.saveMedia(msg, false);
+    console.log(`Archivo multimedia guardado en: ${mediaPath}`);
+
+    // Obtener información del archivo multimedia
+    const media = await msg.downloadMedia();
+
+    if (!media) {
+      console.error("Error: media es undefined después de downloadMedia()");
+      return;
+    }
+
+    // Verificar si el mensaje no es un comando para procesar el archivo automáticamente
+    if (!savedMessage.body.startsWith("!")) {
+      // Responder con confirmación según el tipo de archivo
+      let responseMessage = "✅ Archivo recibido y guardado correctamente.";
+
+      if (media.mimetype.startsWith("image/")) {
+        responseMessage = "✅ Imagen recibida y guardada correctamente.";
+      } else if (
+        media.mimetype.startsWith("application/") ||
+        media.mimetype === "text/plain"
+      ) {
+        responseMessage = "✅ Documento recibido y guardado correctamente.";
+      } else if (media.mimetype.startsWith("audio/")) {
+        responseMessage = "✅ Audio recibido y guardado correctamente.";
+      } else if (media.mimetype.startsWith("video/")) {
+        responseMessage = "✅ Video recibido y guardado correctamente.";
+      }
+
+      responseMessage += `\nPuedes acceder a él usando la referencia: ${savedMessage._id}`;
+      await msg.reply(responseMessage);
+    }
+  } catch (error) {
+    console.error("Error al procesar archivo multimedia:", error);
+  }
+}
+
+// Función para procesar comandos
+async function handleCommand(msg, messageBody) {
+  try {
+    // Respuesta a comando !ping
+    if (messageBody === "!ping") {
+      await msg.reply("pong");
+    }
+    // Comando de ayuda
+    else if (messageBody === "!ayuda" || messageBody === "!help") {
+      const helpMessage = `*Comandos disponibles:*
+
+*Comandos Básicos:*
+!ping - Prueba de conexión
+!ayuda - Muestra este mensaje
+
+*Comandos Multimedia:*
+!sticker - Convierte una imagen en sticker (adjunta imagen)
+!imagen <url> - Envía una imagen desde una URL
+!documento <url> - Envía un documento desde una URL
+!info - Muestra información del mensaje (útil para multimedia)
+!archivos - Lista los últimos 5 archivos que enviaste
+!reenviar <id> - Reenvía un archivo usando su ID de referencia`;
+
+      await msg.reply(helpMessage);
+    }
+    // Comando para convertir imagen a sticker
+    else if (messageBody === "!sticker" && msg.hasMedia) {
+      try {
+        const media = await msg.downloadMedia();
+        await msg.reply(media, null, { sendMediaAsSticker: true });
+      } catch (stickerError) {
+        console.error("Error al crear sticker:", stickerError);
+        await msg.reply(
+          "No se pudo crear el sticker. Asegúrate que sea una imagen válida."
+        );
+      }
+    }
+    // Comando para enviar imagen desde URL
+    else if (messageBody.startsWith("!imagen ")) {
+      const url = messageBody.slice(8).trim();
+      if (!url) {
+        await msg.reply(
+          "Por favor proporciona una URL válida. Uso: !imagen <url>"
+        );
+        return;
+      }
+
+      try {
+        await whatsappService.sendMediaFromUrl(
+          msg.from,
+          url,
+          "Imagen solicitada"
+        );
+      } catch (error) {
+        console.error("Error al enviar imagen desde URL:", error);
+        await msg.reply(
+          "No se pudo enviar la imagen. Verifica que la URL sea válida."
+        );
+      }
+    }
+    // Comando para mostrar información del mensaje
+    else if (messageBody === "!info") {
+      let info = `*Información del mensaje:*\n`;
+      info += `ID: ${msg.id.id}\n`;
+      info += `De: ${msg.from}\n`;
+      info += `Tipo: ${msg.type}\n`;
+      info += `Hora: ${msg.timestamp}\n`;
+      info += `Tiene multimedia: ${msg.hasMedia ? "Sí" : "No"}\n`;
+
+      if (msg.hasMedia) {
+        const media = await msg.downloadMedia();
+        info += `Tipo multimedia: ${media.mimetype}\n`;
+        const extension = MediaHandler.getExtensionFromMimetype(media.mimetype);
+        info += `Extensión detectada: ${extension}\n`;
+        if (media.filename) {
+          info += `Nombre archivo: ${media.filename}\n`;
+        }
+      }
+
+      await msg.reply(info);
+    }
+    // Comando para listar archivos multimedia recibidos
+    else if (messageBody === "!archivos") {
+      try {
+        // Obtener últimos 5 mensajes con multimedia del remitente
+        const messages = await Message.find({
+          from: msg.from,
+          hasMedia: true,
+        })
+          .sort({ createdAt: -1 })
+          .limit(5);
+
+        if (!messages || messages.length === 0) {
+          await msg.reply("No has enviado archivos multimedia recientemente.");
+          return;
+        }
+
+        let response = "*Tus archivos multimedia recientes:*\n\n";
+
+        for (const message of messages) {
+          const mediaFiles = await MediaHandler.findByMessageId(
+            message.messageId
+          );
+          const fileType =
+            mediaFiles.length > 0 ? mediaFiles[0].fileType : "desconocido";
+
+          response += `ID: ${message._id}\n`;
+          response += `Tipo: ${fileType}\n`;
+          response += `Fecha: ${message.createdAt.toLocaleString()}\n`;
+          response += `Para reenviar: !reenviar ${message._id}\n`;
+          response += "\n";
+        }
+
+        await msg.reply(response);
+      } catch (error) {
+        console.error("Error al listar archivos multimedia:", error);
+        await msg.reply("No se pudieron recuperar los archivos multimedia.");
+      }
+    }
+    // Comando para reenviar un archivo multimedia usando una referencia
+    else if (messageBody.startsWith("!reenviar ")) {
+      const referenceId = messageBody.slice(10).trim();
+
+      if (!referenceId) {
+        await msg.reply(
+          "Por favor proporciona el ID de referencia del mensaje. Uso: !reenviar <id>"
+        );
+        return;
+      }
+
+      try {
+        // Buscar el mensaje por ID
+        const savedMessage = await Message.findById(referenceId);
+
+        if (!savedMessage || !savedMessage.hasMedia) {
+          await msg.reply(
+            "No se encontró ningún archivo multimedia con esa referencia."
+          );
+          return;
+        }
+
+        // Buscar los archivos multimedia asociados
+        const mediaFiles = await MediaHandler.findByMessageId(
+          savedMessage.messageId
+        );
+
+        if (!mediaFiles || mediaFiles.length === 0) {
+          await msg.reply(
+            "El archivo multimedia no está disponible o ha sido eliminado."
+          );
+          return;
+        }
+
+        // Enviar cada archivo encontrado
+        for (const file of mediaFiles) {
+          const media = MediaHandler.fromFilePath(file.filePath);
+
+          // Enviar según el tipo de archivo
+          if (file.fileType === "image") {
+            await msg.reply(media, null, { caption: "Imagen reenviada" });
+          } else if (file.fileType === "document") {
+            await msg.reply(media, null, { sendMediaAsDocument: true });
+          } else if (file.fileType === "audio") {
+            await msg.reply(media, null, {
+              sendAudioAsVoice: file.mimetype.includes("ogg"),
+            });
+          } else if (file.fileType === "video") {
+            await msg.reply(media);
+          } else {
+            await msg.reply(media);
+          }
+        }
+      } catch (error) {
+        console.error("Error al reenviar archivo multimedia:", error);
+        await msg.reply("No se pudo reenviar el archivo multimedia.");
+      }
+    }
+  } catch (error) {
+    console.error("Error al procesar comando:", error);
+  }
+}

@@ -279,6 +279,85 @@ router.get("/api/contacts", checkAuth, async (req, res) => {
   }
 });
 
+// API para obtener archivos multimedia con filtros
+router.get("/api/media", checkAuth, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const skip = (page - 1) * limit;
+    const type = req.query.type;
+    const period = req.query.period;
+    const search = req.query.search;
+
+    let query = {};
+
+    // Aplicar filtro por tipo
+    if (type) {
+      query.fileType = type;
+    }
+
+    // Aplicar filtro por período
+    if (period) {
+      const now = new Date();
+      let startDate;
+
+      switch (period) {
+        case "today":
+          startDate = new Date(now.setHours(0, 0, 0, 0));
+          break;
+        case "week":
+          const day = now.getDay();
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - day);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case "month":
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        default:
+          startDate = null;
+      }
+
+      if (startDate) {
+        query.createdAt = { $gte: startDate };
+      }
+    }
+
+    // Aplicar búsqueda por nombre
+    if (search) {
+      query.filename = { $regex: search, $options: "i" };
+    }
+
+    // Contar total de archivos
+    const totalFiles = await MediaFile.countDocuments(query);
+
+    // Obtener archivos
+    const files = await MediaFile.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(totalFiles / limit);
+
+    res.json({
+      success: true,
+      data: {
+        files,
+        currentPage: page,
+        totalPages: totalPages,
+        totalFiles,
+      },
+    });
+  } catch (error) {
+    console.error("Error al obtener archivos multimedia:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error al obtener archivos multimedia",
+      error: error.message,
+    });
+  }
+});
+
 // API para obtener mensajes de una conversación
 router.get("/api/messages/:contactId", checkAuth, async (req, res) => {
   try {
