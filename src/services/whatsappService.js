@@ -8,8 +8,86 @@ const Message = require("../models/message");
  * Servicio para manejar operaciones de WhatsApp
  */
 class WhatsAppService {
-  constructor(client) {
+  constructor() {
+    this.client = null;
+    this._ready = false;
+    this._state = "DISCONNECTED";
+  }
+
+  init(client) {
     this.client = client;
+
+    // Eventos de estado del cliente
+    this.client.on("ready", () => {
+      console.log("Cliente de WhatsApp listo");
+      this._ready = true;
+      this._state = "CONNECTED";
+    });
+
+    this.client.on("authenticated", () => {
+      console.log("Cliente de WhatsApp autenticado");
+      this._state = "AUTHENTICATED";
+    });
+
+    this.client.on("auth_failure", () => {
+      console.error("Error de autenticación en WhatsApp");
+      this._ready = false;
+      this._state = "AUTH_FAILURE";
+    });
+
+    this.client.on("disconnected", () => {
+      console.log("Cliente de WhatsApp desconectado");
+      this._ready = false;
+      this._state = "DISCONNECTED";
+    });
+
+    return this.client;
+  }
+
+  isReady() {
+    return this._ready;
+  }
+
+  getState() {
+    return this._state;
+  }
+
+  async restart() {
+    console.log("Reiniciando cliente de WhatsApp...");
+    this._ready = false;
+
+    try {
+      // Cerrar la sesión actual si existe
+      if (this.client) {
+        await this.client.destroy();
+      }
+
+      // Reiniciar el cliente
+      await this.client.initialize();
+
+      return true;
+    } catch (error) {
+      console.error("Error al reiniciar cliente:", error);
+      throw error;
+    }
+  }
+
+  async logout() {
+    console.log("Cerrando sesión de WhatsApp...");
+    this._ready = false;
+
+    try {
+      // Cerrar la sesión actual
+      await this.client.logout();
+
+      // Reiniciar el cliente para volver a solicitar el QR
+      await this.client.initialize();
+
+      return true;
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+      throw error;
+    }
   }
 
   /**
@@ -19,6 +97,8 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con el resultado
    */
   async sendTextMessage(to, message) {
+    this.checkClient();
+
     try {
       const chat = await this.client.getChatById(to);
       return await chat.sendMessage(message);
@@ -36,6 +116,8 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con el resultado
    */
   async sendMediaMessage(to, message, mediaPath) {
+    this.checkClient();
+
     try {
       const chat = await this.client.getChatById(to);
       const media = MediaHandler.fromFilePath(mediaPath);
@@ -54,7 +136,29 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con el resultado
    */
   async sendImage(to, imagePath, caption = "") {
-    return this.sendMediaMessage(to, caption, imagePath);
+    this.checkClient();
+
+    try {
+      let media;
+
+      // Verificar si la ruta es una URL
+      if (imagePath.startsWith("http")) {
+        media = await MessageMedia.fromUrl(imagePath);
+      } else {
+        // Verificar si el archivo existe
+        if (!fs.existsSync(imagePath)) {
+          throw new Error(`No se encontró la imagen en la ruta ${imagePath}`);
+        }
+
+        media = MessageMedia.fromFilePath(imagePath);
+      }
+
+      const result = await this.client.sendMessage(to, media, { caption });
+      return result;
+    } catch (error) {
+      console.error("Error al enviar imagen:", error);
+      throw error;
+    }
   }
 
   /**
@@ -66,18 +170,41 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con el resultado
    */
   async sendDocument(to, documentPath, filename = null, caption = "") {
-    try {
-      const chat = await this.client.getChatById(to);
-      const media = MediaHandler.fromFilePath(documentPath);
+    this.checkClient();
 
-      if (filename) {
-        media.filename = filename;
+    try {
+      let media;
+
+      // Verificar si la ruta es una URL
+      if (documentPath.startsWith("http")) {
+        media = await MessageMedia.fromUrl(documentPath);
+
+        // Si no se especificó un nombre de archivo, usar el de la URL
+        if (!filename) {
+          filename = documentPath.split("/").pop();
+        }
+      } else {
+        // Verificar si el archivo existe
+        if (!fs.existsSync(documentPath)) {
+          throw new Error(
+            `No se encontró el documento en la ruta ${documentPath}`
+          );
+        }
+
+        media = MessageMedia.fromFilePath(documentPath);
+
+        // Si no se especificó un nombre de archivo, usar el de la ruta
+        if (!filename) {
+          filename = documentPath.split("/").pop();
+        }
       }
 
-      return await chat.sendMessage(media, {
+      const result = await this.client.sendMessage(to, media, {
         caption,
         sendMediaAsDocument: true,
+        filename,
       });
+      return result;
     } catch (error) {
       console.error("Error al enviar documento:", error);
       throw error;
@@ -92,13 +219,27 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con el resultado
    */
   async sendAudio(to, audioPath, asVoiceNote = false) {
-    try {
-      const chat = await this.client.getChatById(to);
-      const media = MediaHandler.fromFilePath(audioPath);
+    this.checkClient();
 
-      return await chat.sendMessage(media, {
+    try {
+      let media;
+
+      // Verificar si la ruta es una URL
+      if (audioPath.startsWith("http")) {
+        media = await MessageMedia.fromUrl(audioPath);
+      } else {
+        // Verificar si el archivo existe
+        if (!fs.existsSync(audioPath)) {
+          throw new Error(`No se encontró el audio en la ruta ${audioPath}`);
+        }
+
+        media = MessageMedia.fromFilePath(audioPath);
+      }
+
+      const result = await this.client.sendMessage(to, media, {
         sendAudioAsVoice: asVoiceNote,
       });
+      return result;
     } catch (error) {
       console.error("Error al enviar audio:", error);
       throw error;
@@ -113,7 +254,29 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con el resultado
    */
   async sendVideo(to, videoPath, caption = "") {
-    return this.sendMediaMessage(to, caption, videoPath);
+    this.checkClient();
+
+    try {
+      let media;
+
+      // Verificar si la ruta es una URL
+      if (videoPath.startsWith("http")) {
+        media = await MessageMedia.fromUrl(videoPath);
+      } else {
+        // Verificar si el archivo existe
+        if (!fs.existsSync(videoPath)) {
+          throw new Error(`No se encontró el video en la ruta ${videoPath}`);
+        }
+
+        media = MessageMedia.fromFilePath(videoPath);
+      }
+
+      const result = await this.client.sendMessage(to, media, { caption });
+      return result;
+    } catch (error) {
+      console.error("Error al enviar video:", error);
+      throw error;
+    }
   }
 
   /**
@@ -125,6 +288,8 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con el resultado
    */
   async sendMediaFromUrl(to, url, caption = "", options = {}) {
+    this.checkClient();
+
     try {
       const chat = await this.client.getChatById(to);
       const media = await MediaHandler.fromUrl(url);
@@ -145,6 +310,8 @@ class WhatsAppService {
    * @returns {Promise<string>} - Ruta al archivo guardado
    */
   async saveMedia(message) {
+    this.checkClient();
+
     try {
       if (!message.hasMedia) {
         throw new Error("El mensaje no contiene multimedia");
@@ -182,6 +349,8 @@ class WhatsAppService {
    * @returns {Promise<Array>} - Array de archivos multimedia
    */
   async getMediaByMessageId(messageId) {
+    this.checkClient();
+
     try {
       return await MediaHandler.findByMessageId(messageId);
     } catch (error) {
@@ -196,6 +365,8 @@ class WhatsAppService {
    * @returns {Promise<Array>} - Array de archivos multimedia
    */
   async getMediaByReferenceId(referenceId) {
+    this.checkClient();
+
     try {
       // Buscar el mensaje por ID de referencia
       const message = await Message.findById(referenceId);
@@ -229,6 +400,8 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con el resultado
    */
   async replyWithMedia(message, mediaPath, caption = "", options = {}) {
+    this.checkClient();
+
     try {
       const media = MediaHandler.fromFilePath(mediaPath);
 
@@ -248,6 +421,8 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con la información del chat
    */
   async getChatInfo(chatId) {
+    this.checkClient();
+
     try {
       return await this.client.getChatById(chatId);
     } catch (error) {
@@ -261,6 +436,8 @@ class WhatsAppService {
    * @returns {Promise} - Promesa con la lista de chats
    */
   async getAllChats() {
+    this.checkClient();
+
     try {
       return await this.client.getChats();
     } catch (error) {
@@ -268,6 +445,18 @@ class WhatsAppService {
       throw error;
     }
   }
+
+  checkClient() {
+    if (!this.client) {
+      throw new Error("Cliente de WhatsApp no inicializado");
+    }
+
+    if (!this._ready) {
+      throw new Error(
+        "Cliente de WhatsApp no está listo. Espere a que se complete la inicialización."
+      );
+    }
+  }
 }
 
-module.exports = WhatsAppService;
+module.exports = new WhatsAppService();

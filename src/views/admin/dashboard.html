@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Panel de Administración WhatsApp Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #f8f9fa;
+        }
+
+        .sidebar-sticky {
+            height: calc(100vh - 48px);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .nav-link.active {
+            color: #2470dc;
+        }
+
+        .nav-link:hover {
+            color: #0d6efd;
+        }
+
+        .navbar-brand {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+            background-color: rgba(0, 0, 0, .25);
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-counter {
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px 10px;
+            background-color: #fff;
+            height: 100px;
+            border-radius: 5px;
+            transition: .3s linear all;
+        }
+
+        .card-counter:hover {
+            box-shadow: 4px 4px 20px rgba(0, 0, 0, 0.1);
+            transition: .3s linear all;
+        }
+
+        .card-counter i {
+            font-size: 5em;
+            opacity: 0.2;
+        }
+
+        .card-counter .count-numbers {
+            position: absolute;
+            right: 35px;
+            top: 20px;
+            font-size: 32px;
+            display: block;
+        }
+
+        .card-counter .count-name {
+            position: absolute;
+            right: 35px;
+            top: 65px;
+            font-style: italic;
+            text-transform: capitalize;
+            opacity: 0.5;
+            display: block;
+            font-size: 18px;
+        }
+
+        .card-counter.primary {
+            background-color: #007bff;
+            color: #FFF;
+        }
+
+        .card-counter.success {
+            background-color: #28a745;
+            color: #FFF;
+        }
+
+        .card-counter.info {
+            background-color: #17a2b8;
+            color: #FFF;
+        }
+
+        .card-counter.warning {
+            background-color: #ffc107;
+            color: #FFF;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">WhatsApp Bot</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#sidebarMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="w-100"></div>
+        <div class="navbar-nav">
+            <div class="nav-item text-nowrap">
+                <a class="nav-link px-3" href="/admin/logout">Cerrar sesión</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3 sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/admin">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/messages">
+                                <i class="bi bi-chat-dots"></i> Mensajes
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/media">
+                                <i class="bi bi-images"></i> Multimedia
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/settings">
+                                <i class="bi bi-gear"></i> Configuración
+                            </a>
+                        </li>
+                    </ul>
+
+                    <h6
+                        class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>Acciones rápidas</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" id="btnSendMessage">
+                                <i class="bi bi-send"></i> Enviar mensaje
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" id="btnRestartClient">
+                                <i class="bi bi-arrow-clockwise"></i> Reiniciar cliente
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefreshStats">
+                                <i class="bi bi-arrow-repeat"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card-counter primary">
+                            <i class="bi bi-chat-dots"></i>
+                            <span class="count-numbers" id="totalMessages">0</span>
+                            <span class="count-name">Mensajes</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card-counter success">
+                            <i class="bi bi-images"></i>
+                            <span class="count-numbers" id="totalMediaFiles">0</span>
+                            <span class="count-name">Archivos</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card-counter info">
+                            <i class="bi bi-image"></i>
+                            <span class="count-numbers" id="totalImages">0</span>
+                            <span class="count-name">Imágenes</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card-counter warning">
+                            <i class="bi bi-file-earmark"></i>
+                            <span class="count-numbers" id="totalDocuments">0</span>
+                            <span class="count-name">Documentos</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                Estado del cliente
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title" id="clientStatus">Cargando...</h5>
+                                <p class="card-text" id="statusDescription">Obteniendo estado del cliente de WhatsApp.
+                                </p>
+                                <button class="btn btn-primary" id="btnRestart">Reiniciar cliente</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                Enviar mensaje
+                            </div>
+                            <div class="card-body">
+                                <form id="sendMessageForm">
+                                    <div class="mb-3">
+                                        <label for="phoneNumber" class="form-label">Número de teléfono</label>
+                                        <input type="text" class="form-control" id="phoneNumber"
+                                            placeholder="54911xxxxxxxx" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="messageText" class="form-label">Mensaje</label>
+                                        <textarea class="form-control" id="messageText" rows="3" required></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-success">Enviar</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="mt-4">Mensajes recientes</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">De</th>
+                                <th scope="col">Fecha</th>
+                                <th scope="col">Tipo</th>
+                                <th scope="col">Contenido</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentMessagesTable">
+                            <tr>
+                                <td colspan="5" class="text-center">Cargando mensajes...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal para confirmación de reinicio -->
+    <div class="modal fade" id="restartModal" tabindex="-1" aria-labelledby="restartModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="restartModalLabel">Confirmar reinicio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Estás seguro de que deseas reiniciar el cliente de WhatsApp? Este proceso podría tomar tiempo y
+                    requerir un nuevo escaneo del código QR.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmRestart">Sí, reiniciar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap & Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Función para cargar estadísticas
+        async function loadStats() {
+            try {
+                const response = await fetch('/admin/api/stats');
+                const data = await response.json();
+
+                if (data.success) {
+                    const stats = data.data;
+
+                    // Actualizar contadores
+                    document.getElementById('totalMessages').textContent = stats.totalMessages;
+                    document.getElementById('totalMediaFiles').textContent = stats.totalMediaFiles;
+                    document.getElementById('totalImages').textContent = stats.mediaByType.image;
+                    document.getElementById('totalDocuments').textContent = stats.mediaByType.document;
+
+                    // Actualizar estado del cliente
+                    document.getElementById('clientStatus').textContent = stats.clientStatus || 'Desconocido';
+
+                    // Descripción basada en el estado
+                    let statusDesc = '';
+                    switch (stats.clientStatus) {
+                        case 'connected':
+                            statusDesc = 'El cliente está conectado y funcionando correctamente.';
+                            break;
+                        case 'disconnected':
+                            statusDesc = 'El cliente está desconectado. Intenta reiniciarlo.';
+                            break;
+                        case 'connecting':
+                            statusDesc = 'El cliente está intentando conectarse.';
+                            break;
+                        default:
+                            statusDesc = 'Estado desconocido del cliente.';
+                    }
+                    document.getElementById('statusDescription').textContent = statusDesc;
+                }
+            } catch (error) {
+                console.error('Error al cargar estadísticas:', error);
+            }
+        }
+
+        // Función para cargar mensajes recientes
+        async function loadRecentMessages() {
+            try {
+                const response = await fetch('/admin/api/messages?limit=10');
+                const data = await response.json();
+
+                if (data.success) {
+                    const messages = data.data.messages;
+                    const tableBody = document.getElementById('recentMessagesTable');
+
+                    if (messages.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No hay mensajes recientes</td></tr>';
+                        return;
+                    }
+
+                    tableBody.innerHTML = '';
+
+                    messages.forEach(message => {
+                        const row = document.createElement('tr');
+
+                        // Formatear fecha
+                        const date = new Date(message.timestamp);
+                        const formattedDate = date.toLocaleString();
+
+                        // Determinar tipo de mensaje
+                        let type = message.hasMedia ? 'Multimedia' : 'Texto';
+                        if (message.isCommand) type = 'Comando';
+
+                        // Limitar contenido a 50 caracteres
+                        let content = message.body;
+                        if (content.length > 50) {
+                            content = content.substring(0, 47) + '...';
+                        }
+
+                        row.innerHTML = `
+              <td>${message.messageId.substring(0, 8)}...</td>
+              <td>${message.from}</td>
+              <td>${formattedDate}</td>
+              <td>${type}</td>
+              <td>${content}</td>
+            `;
+
+                        tableBody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('Error al cargar mensajes recientes:', error);
+                document.getElementById('recentMessagesTable').innerHTML =
+                    '<tr><td colspan="5" class="text-center">Error al cargar mensajes</td></tr>';
+            }
+        }
+
+        // Enviar mensaje
+        document.getElementById('sendMessageForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const phone = document.getElementById('phoneNumber').value;
+            const message = document.getElementById('messageText').value;
+
+            try {
+                const response = await fetch('/admin/api/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ phone, message }),
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Mensaje enviado correctamente');
+                    document.getElementById('messageText').value = '';
+                } else {
+                    alert('Error al enviar mensaje: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error al enviar mensaje:', error);
+                alert('Error al conectar con el servidor');
+            }
+        });
+
+        // Reiniciar cliente
+        document.getElementById('btnRestart').addEventListener('click', function () {
+            const restartModal = new bootstrap.Modal(document.getElementById('restartModal'));
+            restartModal.show();
+        });
+
+        document.getElementById('btnRestartClient').addEventListener('click', function () {
+            const restartModal = new bootstrap.Modal(document.getElementById('restartModal'));
+            restartModal.show();
+        });
+
+        document.getElementById('confirmRestart').addEventListener('click', async function () {
+            try {
+                const response = await fetch('/admin/api/restart', {
+                    method: 'POST',
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Cliente reiniciado correctamente');
+                    const restartModal = bootstrap.Modal.getInstance(document.getElementById('restartModal'));
+                    restartModal.hide();
+
+                    // Recargar estadísticas después de un momento
+                    setTimeout(loadStats, 2000);
+                } else {
+                    alert('Error al reiniciar cliente: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error al reiniciar cliente:', error);
+                alert('Error al conectar con el servidor');
+            }
+        });
+
+        // Botón de actualizar estadísticas
+        document.getElementById('btnRefreshStats').addEventListener('click', function () {
+            loadStats();
+            loadRecentMessages();
+        });
+
+        // Botón de enviar mensaje en el menú lateral
+        document.getElementById('btnSendMessage').addEventListener('click', function (e) {
+            e.preventDefault();
+            document.getElementById('phoneNumber').focus();
+        });
+
+        // Cargar datos al iniciar
+        document.addEventListener('DOMContentLoaded', function () {
+            loadStats();
+            loadRecentMessages();
+        });
+    </script>
+</body>
+
+</html>

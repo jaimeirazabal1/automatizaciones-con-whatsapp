@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración - Panel de Administración WhatsApp Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #f8f9fa;
+        }
+
+        .sidebar-sticky {
+            height: calc(100vh - 48px);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .nav-link.active {
+            color: #2470dc;
+        }
+
+        .nav-link:hover {
+            color: #0d6efd;
+        }
+
+        .navbar-brand {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+            background-color: rgba(0, 0, 0, .25);
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        .config-section {
+            margin-bottom: 2rem;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-online {
+            background-color: #28a745;
+        }
+
+        .status-offline {
+            background-color: #dc3545;
+        }
+
+        .status-connecting {
+            background-color: #ffc107;
+        }
+
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">WhatsApp Bot</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#sidebarMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="w-100"></div>
+        <div class="navbar-nav">
+            <div class="nav-item text-nowrap">
+                <a class="nav-link px-3" href="/admin/logout">Cerrar sesión</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3 sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/messages">
+                                <i class="bi bi-chat-dots"></i> Mensajes
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/media">
+                                <i class="bi bi-images"></i> Multimedia
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/admin/settings">
+                                <i class="bi bi-gear"></i> Configuración
+                            </a>
+                        </li>
+                    </ul>
+
+                    <h6
+                        class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>Acciones rápidas</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" id="btnSendMessage">
+                                <i class="bi bi-send"></i> Enviar mensaje
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" id="btnRestartClient">
+                                <i class="bi bi-arrow-clockwise"></i> Reiniciar cliente
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Configuración</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefresh">
+                                <i class="bi bi-arrow-repeat"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Estado de WhatsApp</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <p>
+                                            <strong>Estado:</strong>
+                                            <span id="clientStatus">
+                                                <span class="status-indicator status-connecting"></span> Cargando...
+                                            </span>
+                                        </p>
+                                        <p>
+                                            <strong>Última actualización:</strong>
+                                            <span id="lastUpdate">--</span>
+                                        </p>
+                                    </div>
+                                    <div class="d-grid gap-2 d-md-block">
+                                        <button class="btn btn-primary" type="button" id="btnCheckStatus">
+                                            <i class="bi bi-arrow-repeat"></i> Verificar estado
+                                        </button>
+                                        <button class="btn btn-warning" type="button" id="btnRestartWhatsApp">
+                                            <i class="bi bi-bootstrap-reboot"></i> Reiniciar WhatsApp
+                                        </button>
+                                        <button class="btn btn-danger" type="button" id="btnLogoutWhatsApp">
+                                            <i class="bi bi-door-open"></i> Cerrar sesión
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6" id="qrContainer">
+                                    <!-- El código QR se mostrará aquí si es necesario -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Configuración del Bot</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="botConfigForm">
+                                <div class="mb-3">
+                                    <label for="botName" class="form-label">Nombre del Bot</label>
+                                    <input type="text" class="form-control" id="botName" value="WhatsApp Bot">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="welcomeMessage" class="form-label">Mensaje de bienvenida</label>
+                                    <textarea class="form-control" id="welcomeMessage"
+                                        rows="3">¡Hola! Soy un bot de WhatsApp. Escribe *!help* para ver los comandos disponibles.</textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Comandos habilitados</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="cmdHelp" checked>
+                                        <label class="form-check-label" for="cmdHelp">
+                                            !help - Ayuda y comandos
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="cmdSticker" checked>
+                                        <label class="form-check-label" for="cmdSticker">
+                                            !sticker - Convertir imagen a sticker
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="cmdImage" checked>
+                                        <label class="form-check-label" for="cmdImage">
+                                            !image - Enviar imagen desde URL
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="cmdDocument" checked>
+                                        <label class="form-check-label" for="cmdDocument">
+                                            !document - Enviar documento desde URL
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="cmdInfo" checked>
+                                        <label class="form-check-label" for="cmdInfo">
+                                            !info - Mostrar información del mensaje
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">Guardar configuración</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Seguridad</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="securityForm">
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label">Contraseña actual</label>
+                                    <input type="password" class="form-control" id="currentPassword">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label">Nueva contraseña</label>
+                                    <input type="password" class="form-control" id="newPassword">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label">Confirmar nueva contraseña</label>
+                                    <input type="password" class="form-control" id="confirmPassword">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Cambiar contraseña</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Mantenimiento</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Limpiar archivos temporales</h5>
+                                            <p class="card-text">Elimina archivos temporales para liberar espacio en
+                                                disco.</p>
+                                            <button class="btn btn-outline-danger" id="btnCleanTemp">
+                                                <i class="bi bi-trash"></i> Limpiar archivos
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Respaldar base de datos</h5>
+                                            <p class="card-text">Genera una copia de seguridad de la base de datos.</p>
+                                            <button class="btn btn-outline-primary" id="btnBackupDb">
+                                                <i class="bi bi-download"></i> Descargar respaldo
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal para enviar mensaje -->
+    <div class="modal fade" id="sendMessageModal" tabindex="-1" aria-labelledby="sendMessageModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sendMessageModalLabel">Enviar mensaje</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="sendMessageForm">
+                        <div class="mb-3">
+                            <label for="phoneNumber" class="form-label">Número de teléfono</label>
+                            <input type="text" class="form-control" id="phoneNumber" placeholder="51999123456" required>
+                            <small class="text-muted">Incluye el código de país sin el símbolo +</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="messageText" class="form-label">Mensaje</label>
+                            <textarea class="form-control" id="messageText" rows="3" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSubmitSendMessage">Enviar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para confirmar reinicio del cliente -->
+    <div class="modal fade" id="restartClientModal" tabindex="-1" aria-labelledby="restartClientModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="restartClientModalLabel">Reiniciar cliente de WhatsApp</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas reiniciar el cliente de WhatsApp?</p>
+                    <p>Esta acción cerrará la sesión actual y volverá a iniciarla. Puede ser necesario escanear el
+                        código QR nuevamente.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmRestart">Reiniciar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap & Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Función para verificar el estado del cliente
+        async function checkClientStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                if (data.success) {
+                    const statusElement = document.getElementById('clientStatus');
+                    const lastUpdateElement = document.getElementById('lastUpdate');
+                    const qrContainer = document.getElementById('qrContainer');
+
+                    // Actualizar fecha de última verificación
+                    lastUpdateElement.textContent = new Date().toLocaleString();
+
+                    if (data.data.ready) {
+                        statusElement.innerHTML = `<span class="status-indicator status-online"></span> Conectado`;
+                        qrContainer.innerHTML = `
+              <div class="alert alert-success" role="alert">
+                <h4 class="alert-heading">¡WhatsApp conectado!</h4>
+                <p>El bot está funcionando correctamente y conectado a WhatsApp.</p>
+              </div>
+            `;
+                    } else {
+                        // Si no está listo, podría necesitar un QR
+                        if (data.data.state === 'CONNECTED') {
+                            statusElement.innerHTML = `<span class="status-indicator status-online"></span> Conectado (iniciando)`;
+                            qrContainer.innerHTML = `
+                <div class="alert alert-warning" role="alert">
+                  <h4 class="alert-heading">Iniciando sesión</h4>
+                  <p>El cliente está conectado pero aún no está completamente listo.</p>
+                </div>
+              `;
+                        } else if (data.data.state === 'DISCONNECTED') {
+                            statusElement.innerHTML = `<span class="status-indicator status-offline"></span> Desconectado`;
+                            qrContainer.innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                  <h4 class="alert-heading">Desconectado</h4>
+                  <p>El cliente está desconectado. Intenta reiniciar el cliente para reconectar.</p>
+                </div>
+              `;
+                        } else {
+                            statusElement.innerHTML = `<span class="status-indicator status-connecting"></span> Esperando QR`;
+                            qrContainer.innerHTML = `
+                <div class="alert alert-info" role="alert">
+                  <h4 class="alert-heading">Esperando código QR</h4>
+                  <p>Es necesario escanear el código QR para iniciar sesión. Reinicia el cliente para generar un nuevo código.</p>
+                </div>
+              `;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error al verificar estado:', error);
+                document.getElementById('clientStatus').innerHTML = `
+          <span class="status-indicator status-offline"></span> Error de conexión
+        `;
+            }
+        }
+
+        // Reiniciar cliente de WhatsApp
+        async function restartWhatsApp() {
+            try {
+                const response = await fetch('/admin/api/restart', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Cliente reiniciado correctamente');
+                    // Actualizar estado después de un breve retraso
+                    setTimeout(checkClientStatus, 2000);
+                } else {
+                    alert('Error al reiniciar cliente: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error al reiniciar cliente:', error);
+                alert('Error al conectar con el servidor');
+            }
+        }
+
+        // Cerrar sesión de WhatsApp
+        async function logoutWhatsApp() {
+            if (confirm('¿Estás seguro de que deseas cerrar la sesión de WhatsApp? Tendrás que escanear el código QR nuevamente.')) {
+                try {
+                    const response = await fetch('/admin/api/logout', {
+                        method: 'POST'
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('Sesión cerrada correctamente');
+                        // Actualizar estado después de un breve retraso
+                        setTimeout(checkClientStatus, 2000);
+                    } else {
+                        alert('Error al cerrar sesión: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error al cerrar sesión:', error);
+                    alert('Error al conectar con el servidor');
+                }
+            }
+        }
+
+        // Limpiar archivos temporales
+        async function cleanTempFiles() {
+            if (confirm('¿Estás seguro de que deseas eliminar todos los archivos temporales?')) {
+                try {
+                    const response = await fetch('/admin/api/clean-temp', {
+                        method: 'POST'
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert(`Se han eliminado ${data.data.count} archivos temporales`);
+                    } else {
+                        alert('Error al limpiar archivos: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error al limpiar archivos:', error);
+                    alert('Error al conectar con el servidor');
+                }
+            }
+        }
+
+        // Respaldar base de datos
+        async function backupDatabase() {
+            try {
+                const response = await fetch('/admin/api/backup');
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `whatsapp_bot_backup_${new Date().toISOString().split('T')[0]}.json`;
+
+                    document.body.appendChild(a);
+                    a.click();
+
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    const data = await response.json();
+                    alert('Error al generar respaldo: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error al generar respaldo:', error);
+                alert('Error al conectar con el servidor');
+            }
+        }
+
+        // Cambiar contraseña
+        async function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert('Por favor completa todos los campos');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                alert('Las contraseñas no coinciden');
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/api/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Contraseña cambiada correctamente');
+                    document.getElementById('securityForm').reset();
+                } else {
+                    alert('Error al cambiar contraseña: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error al cambiar contraseña:', error);
+                alert('Error al conectar con el servidor');
+            }
+        }
+
+        // Guardar configuración del bot
+        async function saveBotConfig() {
+            const botName = document.getElementById('botName').value;
+            const welcomeMessage = document.getElementById('welcomeMessage').value;
+
+            // Obtener comandos habilitados
+            const enabledCommands = {
+                help: document.getElementById('cmdHelp').checked,
+                sticker: document.getElementById('cmdSticker').checked,
+                image: document.getElementById('cmdImage').checked,
+                document: document.getElementById('cmdDocument').checked,
+                info: document.getElementById('cmdInfo').checked
+            };
+
+            try {
+                const response = await fetch('/admin/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        botName,
+                        welcomeMessage,
+                        enabledCommands
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Configuración guardada correctamente');
+                } else {
+                    alert('Error al guardar configuración: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error al guardar configuración:', error);
+                alert('Error al conectar con el servidor');
+            }
+        }
+
+        // Eventos
+        document.addEventListener('DOMContentLoaded', function () {
+            // Verificar estado del cliente al cargar la página
+            checkClientStatus();
+
+            // Botón de verificar estado
+            document.getElementById('btnCheckStatus').addEventListener('click', checkClientStatus);
+
+            // Botón de reiniciar WhatsApp
+            document.getElementById('btnRestartWhatsApp').addEventListener('click', restartWhatsApp);
+
+            // Botón de cerrar sesión de WhatsApp
+            document.getElementById('btnLogoutWhatsApp').addEventListener('click', logoutWhatsApp);
+
+            // Botón de limpiar archivos temporales
+            document.getElementById('btnCleanTemp').addEventListener('click', cleanTempFiles);
+
+            // Botón de respaldar base de datos
+            document.getElementById('btnBackupDb').addEventListener('click', backupDatabase);
+
+            // Formulario de cambio de contraseña
+            document.getElementById('securityForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                changePassword();
+            });
+
+            // Formulario de configuración del bot
+            document.getElementById('botConfigForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                saveBotConfig();
+            });
+
+            // Botón de actualizar
+            document.getElementById('btnRefresh').addEventListener('click', function () {
+                checkClientStatus();
+            });
+
+            // Botón de enviar mensaje (modal)
+            document.getElementById('btnSendMessage').addEventListener('click', function () {
+                const sendMessageModal = new bootstrap.Modal(document.getElementById('sendMessageModal'));
+                sendMessageModal.show();
+            });
+
+            // Enviar mensaje desde modal
+            document.getElementById('btnSubmitSendMessage').addEventListener('click', async function () {
+                const phone = document.getElementById('phoneNumber').value.trim();
+                const message = document.getElementById('messageText').value.trim();
+
+                if (!phone || !message) {
+                    alert('Por favor completa todos los campos');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/admin/api/send', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            phone,
+                            message
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('Mensaje enviado correctamente');
+
+                        // Cerrar modal
+                        const sendMessageModal = bootstrap.Modal.getInstance(document.getElementById('sendMessageModal'));
+                        sendMessageModal.hide();
+
+                        // Limpiar formulario
+                        document.getElementById('sendMessageForm').reset();
+                    } else {
+                        alert('Error al enviar mensaje: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error al enviar mensaje:', error);
+                    alert('Error al conectar con el servidor');
+                }
+            });
+
+            // Botón de reiniciar cliente
+            document.getElementById('btnRestartClient').addEventListener('click', function () {
+                const restartClientModal = new bootstrap.Modal(document.getElementById('restartClientModal'));
+                restartClientModal.show();
+            });
+
+            // Confirmar reinicio de cliente
+            document.getElementById('btnConfirmRestart').addEventListener('click', function () {
+                restartWhatsApp();
+
+                // Cerrar modal
+                const restartClientModal = bootstrap.Modal.getInstance(document.getElementById('restartClientModal'));
+                restartClientModal.hide();
+            });
+        });
+    </script>
+</body>
+
+</html>

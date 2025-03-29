@@ -6,28 +6,29 @@ const MediaFile = require("../models/MediaFile");
 const Message = require("../models/message");
 const path = require("path");
 const fs = require("fs");
-// Comentado temporalmente hasta que multer esté disponible en el contenedor
-// const multer = require("multer");
+const multer = require("multer");
+const { body, validationResult } = require("express-validator");
 
-// Configuración de multer para carga de archivos (comentado temporalmente)
-/*
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const mediaDir = path.join(__dirname, "../utils/media");
-    if (!fs.existsSync(mediaDir)) {
-      fs.mkdirSync(mediaDir, { recursive: true });
-    }
-    cb(null, mediaDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+// Configuración de multer para carga de archivos
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const mediaDir = path.join(__dirname, "../../media");
+      if (!fs.existsSync(mediaDir)) {
+        fs.mkdirSync(mediaDir, { recursive: true });
+      }
+      cb(null, mediaDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname);
+      cb(null, uniqueSuffix + ext);
+    },
+  }),
+  limits: {
+    fileSize: 1024 * 1024 * 20, // 20 MB
   },
 });
-
-const upload = multer({ storage: storage });
-*/
 
 // Función temporal para manejar rutas que requieren multer
 const tempMiddleware = (req, res, next) => {
@@ -52,28 +53,46 @@ router.get("/status", (req, res) => {
  * @desc Enviar mensaje de texto
  * @body {phone, message}
  */
-router.post("/send", async (req, res) => {
-  try {
-    const { phone, message } = req.body;
-
-    if (!phone || !message) {
+router.post(
+  "/send",
+  [
+    body("phone").notEmpty().withMessage("El número de teléfono es requerido"),
+    body("message").notEmpty().withMessage("El mensaje es requerido"),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: "Se requiere número de teléfono y mensaje",
+        errors: errors.array(),
       });
     }
 
-    const result = await WhatsAppService.sendTextMessage(phone, message);
-    res.json({ success: true, result });
-  } catch (error) {
-    console.error("Error al enviar mensaje:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al enviar mensaje",
-      error: error.message,
-    });
+    try {
+      const { phone, message } = req.body;
+
+      // Normalizar número de teléfono
+      const normalizedPhone = phone.includes("@c.us") ? phone : `${phone}@c.us`;
+
+      // Enviar mensaje
+      const result = await WhatsAppService.sendTextMessage(
+        normalizedPhone,
+        message
+      );
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error al enviar mensaje:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Error al enviar mensaje",
+      });
+    }
   }
-});
+);
 
 /**
  * @route POST /api/send/image
@@ -82,36 +101,6 @@ router.post("/send", async (req, res) => {
  * @file image
  */
 router.post("/send/image", tempMiddleware);
-// Versión original comentada
-/*
-router.post("/send/image", upload.single("image"), async (req, res) => {
-  try {
-    const { phone, caption } = req.body;
-
-    if (!phone || !req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Se requiere número de teléfono e imagen",
-      });
-    }
-
-    const result = await WhatsAppService.sendImage(
-      phone,
-      req.file.path,
-      caption || ""
-    );
-
-    res.json({ success: true, result });
-  } catch (error) {
-    console.error("Error al enviar imagen:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al enviar imagen",
-      error: error.message,
-    });
-  }
-});
-*/
 
 /**
  * @route POST /api/send/document
@@ -288,7 +277,70 @@ router.get("/message/:id/media", async (req, res) => {
  * @route POST /api/upload
  * @desc Subir un archivo multimedia a través de la API
  */
-router.post("/upload", tempMiddleware);
+router.post(
+  "/upload",
+  [body("phone").notEmpty().withMessage("El número de teléfono es requerido")],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty() || !req.file) {
+      return res.status(400).json({
+        success: false,
+        errors: !req.file ? ["Archivo no subido"] : errors.array(),
+      });
+    }
+
+    try {
+      const { phone, caption } = req.body;
+      const file = req.file;
+
+      // Normalizar número de teléfono
+      const normalizedPhone = phone.includes("@c.us") ? phone : `${phone}@c.us`;
+
+      // Determinar tipo de archivo
+      let result;
+      const mimetype = file.mimetype.toLowerCase();
+
+      if (mimetype.startsWith("image/")) {
+        result = await WhatsAppService.sendImage(
+          normalizedPhone,
+          file.path,
+          caption
+        );
+      } else if (mimetype.startsWith("audio/")) {
+        result = await WhatsAppService.sendAudio(normalizedPhone, file.path);
+      } else if (mimetype.startsWith("video/")) {
+        result = await WhatsAppService.sendVideo(
+          normalizedPhone,
+          file.path,
+          caption
+        );
+      } else {
+        result = await WhatsAppService.sendDocument(
+          normalizedPhone,
+          file.path,
+          caption,
+          file.originalname
+        );
+      }
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error al enviar archivo:", error);
+      // Si hubo error, eliminar el archivo subido
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message || "Error al enviar archivo",
+      });
+    }
+  }
+);
 
 /**
  * @route DELETE /api/media/:id

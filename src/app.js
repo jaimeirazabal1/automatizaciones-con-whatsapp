@@ -6,11 +6,13 @@ const qrcode = require("qrcode-terminal");
 const path = require("path");
 const fs = require("fs");
 const connectDB = require("../config/database");
-const WhatsAppService = require("./services/whatsappService");
+const whatsappService = require("./services/whatsappService");
 const SchedulerService = require("./services/schedulerService");
 const Message = require("./models/message");
 const MediaHandler = require("./utils/mediaHandler");
 const apiRoutes = require("./routes/api");
+const adminRoutes = require("./routes/admin");
+const cookieParser = require("cookie-parser");
 
 // Crear aplicación Express
 const app = express();
@@ -19,6 +21,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Crear directorio para archivos multimedia si no existe
 const mediaDir = path.join(__dirname, "utils", "media");
@@ -31,17 +34,14 @@ connectDB();
 
 // Inicializar el cliente de WhatsApp
 const client = new Client({
-  authStrategy: new LocalAuth({
-    dataPath: process.env.SESSION_DATA_PATH || "./session",
-  }),
+  authStrategy: new LocalAuth({ clientId: "whatsapp_bot" }),
   puppeteer: {
-    headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   },
 });
 
 // Inicializar servicios
-const whatsappService = new WhatsAppService(client);
+whatsappService.init(client);
 const schedulerService = new SchedulerService(whatsappService);
 
 // Evento cuando se recibe el código QR
@@ -404,6 +404,7 @@ client.initialize();
 
 // Rutas de la API
 app.use("/api", apiRoutes);
+app.use("/admin", adminRoutes);
 
 // Rutas básicas
 app.get("/", (req, res) => {

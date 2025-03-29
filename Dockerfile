@@ -48,7 +48,12 @@ WORKDIR /app
 # Copiamos package.json y package-lock.json
 COPY package*.json ./
 
+# Asegurarse que las dependencias necesarias están instaladas
+RUN npm install express-validator cookie-parser
+RUN npm install puppeteer
+
 # Instalamos las dependencias con una configuración más robusta
+# Incluimos puppeteer en la instalación normal
 RUN npm install --no-optional --legacy-peer-deps && \
     npm cache clean --force
 
